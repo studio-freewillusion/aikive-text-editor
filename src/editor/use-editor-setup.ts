@@ -4,9 +4,8 @@ import FileHandler from '@tiptap/extension-file-handler';
 import { TableKit } from '@tiptap/extension-table';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontFamily, FontSize, LineHeight, TextStyle } from '@tiptap/extension-text-style';
-import Youtube from '@tiptap/extension-youtube';
 import StarterKit from '@tiptap/starter-kit';
-import { ClampColumnWidth, CustomImage, CustomLink, VideoBlock } from '../extensions';
+import { ClampColumnWidth, CustomImage, CustomLink, StoredYoutube, VideoBlock } from '../extensions';
 import { isAllowedEditorUri } from '../sanitize';
 import { attachFiles, IMAGE_MIME_TYPES, type FileDeps } from './attach-files';
 import type { HtmlClassNames } from './types';
@@ -38,7 +37,7 @@ export function buildExtensions(
     }),
     ClampColumnWidth,
     CustomImage,
-    Youtube.configure({
+    StoredYoutube.configure({
       controls: false,
       nocookie: true,
       HTMLAttributes: classNames.youtube ? { class: classNames.youtube } : {},

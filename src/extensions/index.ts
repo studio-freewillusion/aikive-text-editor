@@ -4,3 +4,4 @@ export { ClampColumnWidth } from './clamp-column-width';
 export { CustomLink } from './custom-link';
 export { migrateImageAttrs } from './migrate-image-attrs';
 export { normalizeSourceHTML } from './normalize-source-html';
+export { StoredYoutube } from './stored-youtube';

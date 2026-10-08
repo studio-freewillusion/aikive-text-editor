@@ -70,3 +70,13 @@ test('링크가 걸린 이미지는 뷰어에서 링크로 그린다', async ({ 
   await expect(link).toHaveAttribute('href', 'https://example.com');
   await expect(link).toHaveAttribute('rel', /noopener/);
 });
+
+test('최신 이모지는 지원하는 브라우저에서 글자로 저장된다', async ({ page }) => {
+  await open(page, '<p>a <span data-type="emoji" data-name="jellyfish">🪼</span> <span data-type="emoji" data-name="bubbles">🫧</span></p>');
+  await page.locator('.ProseMirror').click();
+  await page.keyboard.press('End');
+  await page.keyboard.type('b');
+  await expect(html(page)).toContainText('🪼');
+  await expect(html(page)).toContainText('🫧');
+  await expect(html(page)).not.toContainText('<img');
+});

@@ -14,13 +14,12 @@ function removeEmptyYouTubeDivs(html: string): string {
 
 export function parseContent(raw: string | undefined): string | JSONContent {
   if (!raw) return '';
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && parsed.type === 'doc') {
-      return migrateImageAttrs(parsed) as JSONContent;
-    }
+    parsed = JSON.parse(raw);
   } catch {
-    // HTML
+    return removeEmptyYouTubeDivs(raw);
   }
-  return removeEmptyYouTubeDivs(raw);
+  // JSON 이면 문서가 아니어도 그대로 넘긴다 — 지금 에디터와 같게 문자열은 글자로, 숫자 등은 빈 문서로 열린다
+  return (typeof parsed === 'object' && parsed !== null ? migrateImageAttrs(parsed as Record<string, unknown>) : parsed) as JSONContent;
 }
