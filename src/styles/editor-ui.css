@@ -50,6 +50,21 @@
   display: none;
 }
 
+.aikive-toolbar.is-fade-end {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+}
+
+.aikive-toolbar.is-fade-start {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 1.5rem);
+  mask-image: linear-gradient(to right, transparent, #000 1.5rem);
+}
+
+.aikive-toolbar.is-fade-start.is-fade-end {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 1.5rem, #000 calc(100% - 1.5rem), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 1.5rem, #000 calc(100% - 1.5rem), transparent);
+}
+
 .aikive-toolbar__select {
   flex-shrink: 0;
   height: 1.75rem;

@@ -2,9 +2,10 @@
 
 aikive-text-editor 로 저장하는 본문을 AI 가 직접 쓸 때 따르는 형식입니다. 에디터의 HTML 모드에 붙여 넣거나 저장 값으로 바로 쓸 수 있습니다.
 
-- 아래 예시는 저장해도 한 글자도 바뀌지 않는 형태입니다. 가능하면 그대로 따라 씁니다.
-- 예시와 다르게 써도 저장할 때 같은 형태로 바뀝니다. 다만 아래 「쓰지 않는 것」은 저장할 때 빠지거나 의도와 다르게 보입니다.
+- 아래 예시는 에디터로 저장해도 바뀌지 않는 형태입니다. 가능하면 그대로 따라 씁니다. 저장 값에 바로 넣을 때도 이 형태로 씁니다.
+- 예시와 다르게 써도 에디터로 저장할 때 같은 형태로 바뀝니다. 다만 아래 「쓰지 않는 것」은 빠지거나 의도와 다르게 보입니다.
 - 본문은 블록(문단·제목·목록·표·이미지 등)을 차례로 늘어놓은 것입니다. 블록을 다른 태그로 감싸지 않습니다.
+- 마지막 블록이 문단이 아니면(표·이미지·목록 등) 저장할 때 끝에 빈 문단 `<p></p>` 가 하나 붙습니다.
 
 ## 문단과 줄바꿈
 
@@ -40,7 +41,7 @@ aikive-text-editor 로 저장하는 본문을 AI 가 직접 쓸 때 따르는 �
 
 ## 글자색·글자 크기·줄간격
 
-`<span style="…">` 로 감쌉니다. 한 `<span>` 에는 하나만 씁니다. 값은 아래 목록에서 고릅니다.
+`<span style="…">` 로 감쌉니다. 한 `<span>` 에는 하나만 씁니다. 값은 아래 목록에서 고릅니다. 줄간격도 `<p>` 가 아니라 `<span>` 에 씁니다(`<p style="line-height: …">` 는 빠집니다).
 
 ```html
 <p><span style="color: rgb(220, 38, 38);">빨간 글자</span> <span style="font-size: 24px;">큰 글자</span></p><p><span style="line-height: 2;">줄간격을 넓힌 문단</span></p>
@@ -87,7 +88,7 @@ aikive-text-editor 로 저장하는 본문을 AI 가 직접 쓸 때 따르는 �
 
 ## 링크
 
-`http://`·`https://` 주소만 링크가 됩니다. 링크는 새 탭에서 열립니다.
+`http://`·`https://` 주소만 링크가 됩니다. 링크는 새 탭에서 열립니다(`target` 을 빼도 새 탭으로 저장됩니다).
 
 ```html
 <p>자세한 내용은 <a target="_blank" rel="noopener noreferrer" href="https://example.com/notice">공지</a>를 보세요.</p>
@@ -109,10 +110,22 @@ aikive-text-editor 로 저장하는 본문을 AI 가 직접 쓸 때 따르는 �
 
 ## 이미지
 
-이미지는 블록 하나로 씁니다(`<p>` 안에 넣지 않습니다). 주소는 `https://` 로 시작해야 합니다. 너비는 `%` 로 정합니다.
+이미지는 블록 하나로 씁니다(`<p>` 안에 넣지 않습니다). 주소는 `https://` 로 씁니다. 너비는 `%` 로 정합니다.
 
 ```html
 <img src="https://cdn.example.com/a.png" alt="이미지 설명" style="display: block; width: 100%;"><img src="https://cdn.example.com/b.png" style="display: block; width: 50%;">
+```
+
+너비를 줄인 이미지는 `margin` 으로 정렬합니다. 가운데는 `margin: 0px auto;`, 왼쪽은 `margin: 0px auto 0px 0px;`, 오른쪽은 `margin: 0px 0px 0px auto;` 입니다.
+
+```html
+<img src="https://cdn.example.com/a.png" style="display: block; width: 50%; margin: 0px auto;"><img src="https://cdn.example.com/b.png" style="display: block; width: 50%; margin: 0px 0px 0px auto;">
+```
+
+이미지 아래 설명은 다음 문단에 씁니다(`<figure>`·`<figcaption>` 은 쓰지 않습니다).
+
+```html
+<img src="https://cdn.example.com/a.png" alt="수상작 장면" style="display: block; width: 100%;"><p style="text-align: center;"><span style="font-size: 14px;">수상작 장면</span></p>
 ```
 
 이미지에 링크를 걸려면 `<a>` 로 감쌉니다. 링크가 걸린 이미지는 눌러도 확대되지 않고 링크로 이동합니다.
@@ -123,7 +136,7 @@ aikive-text-editor 로 저장하는 본문을 AI 가 직접 쓸 때 따르는 �
 
 ## 유튜브
 
-아래처럼 줄여 써도 됩니다. 나머지 속성은 저장할 때 붙습니다. 주소는 `https://www.youtube.com/embed/영상ID` 나 `https://www.youtube-nocookie.com/embed/영상ID` 형태입니다.
+아래처럼 줄여 써도 됩니다. 나머지 속성은 에디터로 저장할 때 붙습니다. 저장 값에 바로 넣을 때는 줄여 쓴 형태를 쓰지 말고 에디터로 한 번 저장합니다. 주소는 `https://www.youtube.com/embed/영상ID` 나 `https://www.youtube-nocookie.com/embed/영상ID` 형태입니다.
 
 ```html 줄여 쓰기
 <div data-youtube-video=""><iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID"></iframe></div>
@@ -131,20 +144,22 @@ aikive-text-editor 로 저장하는 본문을 AI 가 직접 쓸 때 따르는 �
 
 ## 이모지
 
-이모지는 글자 그대로 씁니다. 😀🎉
+이모지는 글자 그대로 씁니다. 저장할 때 이모지 표시 형태로 바뀝니다.
 
-```html
+```html 줄여 쓰기
 <p>축하합니다 🎉</p>
 ```
 
 ## 쓰지 않는 것
 
-- `class`·`id`·`on…` 속성, `<script>`·`<style>` — 저장할 때 빠집니다.
+아래는 쓰지 않습니다. 에디터로 저장하면 빠지고, 저장 값에 바로 넣으면 의도와 다르게 보일 수 있습니다.
+
+- `class`·`id`·`on…` 속성, `<script>`·`<style>`
 - 블록을 감싸는 `<div>`·`<section>` — 감싸개는 빠지고 안의 블록만 남습니다.
-- `data:` 로 시작하는 이미지 주소 — 저장할 때 빠집니다.
-- 유튜브가 아닌 `<iframe>` — 저장할 때 빠집니다.
+- `data:` 로 시작하는 이미지 주소
+- 유튜브가 아닌 `<iframe>`
 - 영상 파일(`<video>`) — 새로 넣지 않습니다. 영상은 유튜브로 넣습니다.
-- 위에 없는 `style` 값(배경색·여백 등) — 저장할 때 빠지거나 보이지 않습니다.
+- 위에 없는 `style` 값(배경색 등)
 
 ## 전체 예시
 

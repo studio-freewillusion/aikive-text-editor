@@ -1,5 +1,5 @@
 import { useEditorState, type Editor } from '@tiptap/react';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Features, NoticeKind } from '../editor/types';
 import {
   AlignCenter,
@@ -99,6 +99,25 @@ function ToolButton({
 
 export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onNotice, scrollable }: ToolbarProps) {
   const [colorOpen, setColorOpen] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+  const [fade, setFade] = useState({ start: false, end: false });
+  // 밀어서 넘기는 툴바는 막대를 숨기므로 더 넘길 쪽 끝을 흐려 버튼이 더 있음을 알린다
+  const updateFade = useCallback(() => {
+    const el = barRef.current;
+    if (!el || !scrollable) return;
+    const start = el.scrollLeft > 1;
+    const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setFade((prev) => (prev.start === start && prev.end === end ? prev : { start, end }));
+  }, [scrollable]);
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el || !scrollable) return;
+    updateFade();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(updateFade);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [scrollable, updateFade]);
   const state = useEditorState({
     editor,
     selector: ({ editor: ed }) => ({
@@ -150,7 +169,13 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
   const chain = () => editor.chain().focus();
 
   return (
-    <div className={cx('aikive-toolbar', scrollable && 'is-scrollable')} role="toolbar" aria-label="서식">
+    <div
+      ref={barRef}
+      className={cx('aikive-toolbar', scrollable && 'is-scrollable', fade.start && 'is-fade-start', fade.end && 'is-fade-end')}
+      role="toolbar"
+      aria-label="서식"
+      onScroll={scrollable ? updateFade : undefined}
+    >
       {features.heading && (
         <>
           <ToolButton label="제목 1" active={state.isHeading1} onClick={() => chain().toggleHeading({ level: 1 }).run()}>

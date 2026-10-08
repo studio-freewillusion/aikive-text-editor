@@ -18,6 +18,7 @@ React 19 가 필요합니다(`peerDependencies`).
 npm ls prosemirror-model                          # npm — 버전이 하나여야 한다
 pnpm why prosemirror-model                        # pnpm
 pnpm update --depth Infinity "prosemirror-*"      # 두 벌이면(pnpm)
+npm dedupe                                        # 두 벌이면(npm)
 ```
 
 ## 진입점
