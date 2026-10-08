@@ -1,16 +1,32 @@
 import { EditorState } from '@tiptap/pm/state';
+import DragHandle from '@tiptap/extension-drag-handle-react';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { BubbleMenu } from '@tiptap/react/menus';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { GripVertical } from '../ui/icons';
+import { shouldShowBubbleMenu } from '../ui/should-show-bubble-menu';
+import { Toolbar } from '../ui/toolbar';
 import { parseContent } from './parse-content';
-import { attachFiles, type FileDeps } from './attach-files';
+import { attachFiles, IMAGE_MIME_TYPES, type FileDeps } from './attach-files';
 import { applySourceContent, SOURCE_HTML_ERROR_MESSAGE } from './source-mode';
 import { buildExtensions } from './use-editor-setup';
-import type { AikiveTextEditorHandle, AikiveTextEditorProps, NoticeKind, Snapshot } from './types';
+import { DEFAULT_FEATURES, type AikiveTextEditorHandle, type AikiveTextEditorProps, type NoticeKind, type Snapshot } from './types';
 
 const htmlOf = (editor: Editor) => (editor.isEmpty ? '' : editor.getHTML());
 
 export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEditorProps>(function AikiveTextEditor(
-  { initialContent, editable = true, htmlClassNames, onChange, onUploadImage, onNotice, className, contentClassName },
+  {
+    initialContent,
+    editable = true,
+    features: featuresProp,
+    toolbar = 'fixed',
+    htmlClassNames,
+    onChange,
+    onUploadImage,
+    onNotice,
+    className,
+    contentClassName,
+  },
   ref,
 ) {
   const onChangeRef = useRef(onChange);
@@ -21,6 +37,14 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   uploadRef.current = onUploadImage;
   const [sourceMode, setSourceModeState] = useState(false);
   const [sourceText, setSourceText] = useState('');
+  const [coarsePointer, setCoarsePointer] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const features = { ...DEFAULT_FEATURES, ...featuresProp };
+
+  // 서버 렌더링에서는 알 수 없어 마운트 뒤에 읽는다 — 터치 기기는 말풍선 대신 고정 툴바
+  useEffect(() => {
+    setCoarsePointer(window.matchMedia?.('(pointer: coarse)').matches ?? false);
+  }, []);
 
   const notice = (message: string, kind: NoticeKind) => {
     if (noticeRef.current) noticeRef.current(message, kind);
@@ -41,6 +65,24 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     },
     onUpdate: ({ editor: ed }) => onChangeRef.current?.(htmlOf(ed)),
   });
+
+  const setSourceMode = (on: boolean) => {
+    if (!editor || on === sourceMode) return;
+    if (on) {
+      editor.commands.blur();
+      setSourceText(editor.getHTML());
+      setSourceModeState(true);
+      return;
+    }
+    try {
+      applySourceContent(editor, sourceText);
+    } catch {
+      notice(SOURCE_HTML_ERROR_MESSAGE, 'error');
+      return;
+    }
+    setSourceModeState(false);
+    onChangeRef.current?.(htmlOf(editor));
+  };
 
   useImperativeHandle(
     ref,
@@ -65,23 +107,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         editor.view.dispatch(editor.state.tr);
         return true;
       },
-      setSourceMode: (on) => {
-        if (!editor || on === sourceMode) return;
-        if (on) {
-          editor.commands.blur();
-          setSourceText(editor.getHTML());
-          setSourceModeState(true);
-          return;
-        }
-        try {
-          applySourceContent(editor, sourceText);
-        } catch {
-          notice(SOURCE_HTML_ERROR_MESSAGE, 'error');
-          return;
-        }
-        setSourceModeState(false);
-        onChangeRef.current?.(htmlOf(editor));
-      },
+      setSourceMode,
       isEmpty: () => !editor || editor.isEmpty,
       insertFiles: async (files) => {
         if (editor) await attachFiles(editor, files, editor.state.selection.anchor, fileDeps());
@@ -93,8 +119,47 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     [editor, sourceMode, sourceText],
   );
 
+  const toolbarNode = editor ? (
+    <Toolbar
+      editor={editor}
+      features={features}
+      sourceMode={sourceMode}
+      onToggleSource={() => setSourceMode(!sourceMode)}
+      onPickImage={onUploadImage ? () => fileInputRef.current?.click() : undefined}
+      onNotice={notice}
+      scrollable={coarsePointer}
+    />
+  ) : null;
+  const useBubble = toolbar === 'bubble' && !coarsePointer && !sourceMode;
+
   return (
     <div className={['aikive-text-editor', className].filter(Boolean).join(' ')}>
+      {editable && !useBubble && <div className="aikive-text-editor__toolbar">{toolbarNode}</div>}
+      {editable && editor && useBubble && (
+        <BubbleMenu editor={editor} options={{ placement: 'top', offset: 8 }} updateDelay={0} shouldShow={shouldShowBubbleMenu}>
+          {toolbarNode}
+        </BubbleMenu>
+      )}
+      {editable && editor && !coarsePointer && (
+        <DragHandle editor={editor} className="aikive-text-editor__drag-handle">
+          <GripVertical aria-hidden />
+        </DragHandle>
+      )}
+      {editable && onUploadImage && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          hidden
+          multiple
+          accept={IMAGE_MIME_TYPES.join(',')}
+          onChange={async (e) => {
+            const input = e.target;
+            const files = Array.from(input.files ?? []);
+            input.value = '';
+            if (editor && files.length) await attachFiles(editor, files, editor.state.selection.anchor, fileDeps());
+          }}
+        />
+      )}
       {sourceMode && (
         <textarea
           className="aikive-text-editor__source"
