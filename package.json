@@ -22,7 +22,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup && esbuild src/styles/index.css --bundle --outfile=dist/styles.css --log-level=warning",
+    "build": "rm -rf dist && tsup && esbuild src/styles/index.css --bundle --outfile=dist/styles.css --log-level=warning",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",

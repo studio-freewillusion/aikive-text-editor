@@ -10,7 +10,7 @@ const shared = {
 };
 
 export default defineConfig([
-  { ...shared, entry: { viewer: 'src/viewer/index.ts' }, clean: true },
+  { ...shared, entry: { viewer: 'src/viewer/index.ts' } },
   {
     ...shared,
     entry: { editor: 'src/editor/index.ts' },
