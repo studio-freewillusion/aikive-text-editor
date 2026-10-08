@@ -26,6 +26,20 @@ test('이미지와 영상을 함께 끌어다 놓으면 영상만 빠진다', as
   await expect(html(page)).toContainText('<img');
 });
 
+test('목록에 없는 형식을 끌어다 놓으면 안내하고 브라우저가 파일을 열지 않는다', async ({ page }) => {
+  await open(page, '<p>a</p>');
+  const prevented = await page.locator('.ProseMirror').evaluate((el) => {
+    const dt = new DataTransfer();
+    dt.items.add(new File([new Uint8Array(10)], 'doc.pdf', { type: 'application/pdf' }));
+    const r = el.getBoundingClientRect();
+    const ev = new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 5, clientY: r.top + 5 });
+    el.dispatchEvent(ev);
+    return ev.defaultPrevented;
+  });
+  expect(prevented).toBe(true);
+  await expect(page.getByTestId('notices')).toContainText('지원하지 않는 파일 형식입니다.');
+});
+
 test('붙여넣은 HTML 속 영상은 들어오지 않는다', async ({ page }) => {
   await open(page, '<p></p>');
   await page.locator('.ProseMirror').click();

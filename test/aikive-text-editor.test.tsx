@@ -2,6 +2,7 @@ import { act, render, waitFor } from '@testing-library/react';
 import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/react';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { AikiveTextEditor, type AikiveTextEditorHandle } from '../src/editor';
 
 const editorOf = async (container: HTMLElement) => {
@@ -109,5 +110,38 @@ describe('AikiveTextEditor', () => {
     fireEvent.change(textarea, { target: { value: '<p>b</p>' } });
     act(() => ref.current!.setSourceMode(false));
     await waitFor(() => expect(ref.current!.getHTML()).toBe('<p>b</p>'));
+  });
+  it('스냅샷을 되살려도 그 뒤에 붙은 플러그인은 그대로 남는다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    const { container } = render(<AikiveTextEditor ref={ref} initialContent="<p>가</p>" />);
+    const ed = await editorOf(container);
+    const snap = ref.current!.takeSnapshot()!;
+    const key = new PluginKey('later');
+    act(() => {
+      ed.registerPlugin(new Plugin({ key }));
+    });
+    act(() => {
+      ref.current!.restoreSnapshot(snap);
+    });
+    expect(key.get(ed.state)).toBeTruthy();
+  });
+
+  it('editable 이 바뀌면 에디터도 따라 바뀐다', async () => {
+    const { container, rerender } = render(<AikiveTextEditor initialContent="<p>a</p>" editable={false} />);
+    const ed = await editorOf(container);
+    expect(ed.isEditable).toBe(false);
+    rerender(<AikiveTextEditor initialContent="<p>a</p>" editable />);
+    await waitFor(() => expect(ed.isEditable).toBe(true));
+  });
+
+  it('저장된 영상 블록을 불러와 저장해도 주소가 남는다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    const saved =
+      '<div data-type="videoBlock"><video src="https://cdn.example.com/a.mp4" poster="https://cdn.example.com/a.jpg" controls="" loop=""></video></div>';
+    render(<AikiveTextEditor ref={ref} initialContent={saved} />);
+    await waitFor(() => expect(ref.current?.getHTML()).toContain('src="https://cdn.example.com/a.mp4"'));
+    const out = ref.current!.getHTML();
+    expect(out).toContain('poster="https://cdn.example.com/a.jpg"');
+    expect(out).toContain('loop=""');
   });
 });

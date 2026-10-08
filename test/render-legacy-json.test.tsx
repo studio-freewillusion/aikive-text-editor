@@ -179,4 +179,14 @@ describe('renderLegacyJson', () => {
         expect(header).toHaveAttribute('colspan', '2');
         expect(header).toHaveStyle({ width: '120px' });
     });
+    it('위험한 스킴의 링크는 주소를 넣지 않고 안전한 링크는 그대로 둔다', () => {
+        const linkDoc = (href: string) => ({
+            type: 'doc',
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: href, marks: [{ type: 'link', attrs: { href } }] }] }],
+        });
+        const hrefs = ['javascript:alert(1)', 'java\tscript:alert(1)', 'data:text/html,x', 'https://example.com', 'mailto:a@example.com', '/rel'];
+        const { container } = render(<div>{hrefs.map((h) => renderLegacyJson(linkDoc(h), { resolveImageSrc: (s) => s }))}</div>);
+        const got = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+        expect(got).toEqual([null, null, null, 'https://example.com', 'mailto:a@example.com', '/rel']);
+    });
 });

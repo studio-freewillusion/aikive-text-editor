@@ -66,6 +66,11 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     onUpdate: ({ editor: ed }) => onChangeRef.current?.(htmlOf(ed)),
   });
 
+  // useEditor 는 옵션이 바뀌어도 편집 가능 여부를 그대로 둔다
+  useEffect(() => {
+    if (editor && editor.isEditable !== editable) editor.setEditable(editable);
+  }, [editor, editable]);
+
   const setSourceMode = (on: boolean) => {
     if (!editor || on === sourceMode) return;
     if (on) {
@@ -102,7 +107,8 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         // 에디터가 다시 만들어졌으면 예전 상태의 플러그인이 맞지 않아 되살리지 않는다
         if (!editor || snapshot.state.schema !== editor.schema) return false;
         setSourceModeState(false);
-        editor.view.updateState(snapshot.state);
+        // 플러그인은 지금 것을 쓴다 — 스냅샷 뒤에 붙은 말풍선 툴바 등이 빠지면 안 된다
+        editor.view.updateState(snapshot.state.reconfigure({ plugins: editor.state.plugins }));
         // updateState 는 이벤트를 안 내 툴바 활성 표시가 따라오지 않는다
         editor.view.dispatch(editor.state.tr);
         return true;

@@ -8,6 +8,13 @@ const EmojiText = lazy(() => import('./emoji-text'));
 
 
 
+// HTML 본문은 정화를 거치지만 옛 JSON 은 바로 그리므로 여기서 스킴을 거른다. 브라우저가 주소 속 탭·줄바꿈을 지우므로 지우고 본다
+const safeLinkHref = (href: unknown): string | undefined => {
+    if (typeof href !== 'string') return undefined;
+    const bare = href.replace(/[\u0000-\u0020]/g, '');
+    return !/^[a-z][a-z0-9+.-]*:/i.test(bare) || /^(https?|mailto|tel):/i.test(bare) ? href : undefined;
+};
+
 const getYoutubeEmbedSrc = (src?: string, start?: number): string | null => {
     if (!src) return null;
 
@@ -74,7 +81,7 @@ const applyMarks = (
                 return (
                     <a
                         key={key}
-                        href={mark.attrs?.href}
+                        href={safeLinkHref(mark.attrs?.href)}
                         target={target}
                         rel={target === '_blank' ? 'noopener noreferrer' : undefined}
                     >

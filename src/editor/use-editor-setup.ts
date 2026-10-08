@@ -7,7 +7,7 @@ import { Color, FontFamily, FontSize, LineHeight, TextStyle } from '@tiptap/exte
 import StarterKit from '@tiptap/starter-kit';
 import { ClampColumnWidth, CustomImage, CustomLink, StoredYoutube, VideoBlock } from '../extensions';
 import { isAllowedEditorUri } from '../sanitize';
-import { attachFiles, IMAGE_MIME_TYPES, type FileDeps } from './attach-files';
+import { attachFiles, type FileDeps } from './attach-files';
 import type { HtmlClassNames } from './types';
 
 export function buildExtensions(
@@ -44,8 +44,7 @@ export function buildExtensions(
     }),
     VideoBlock,
     FileHandler.configure({
-      // 영상 형식을 목록에서 빼면 영상 드롭이 조용히 무시돼 안내가 안 뜬다
-      allowedMimeTypes: [...IMAGE_MIME_TYPES, 'video/mp4', 'video/webm', 'video/mpeg', 'video/x-msvideo', 'video/quicktime'],
+      // 형식 목록을 두지 않는다 — 목록 밖 파일은 드롭이 처리 안 돼 브라우저가 파일을 연다. 거르기는 canAttach 가 한다
       onDrop: (ed, files, pos) => {
         void attachFiles(ed, files, pos, fileDeps());
       },

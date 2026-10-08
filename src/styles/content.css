@@ -233,7 +233,7 @@
 }
 .tiptap table {
   width: 100%;
-  /* 열 리사이즈 인라인 px 가 에디터 폭을 못 넘게. min-width 가 max-width 를 이기므로 !important (vault「에디터 표 열 폭 보정」) */
+  /* 열 리사이즈 인라인 px 가 에디터 폭을 못 넘게. min-width 가 max-width 를 이기므로 !important */
   min-width: 0 !important;
   max-width: 100%;
   margin: 1rem 0;
@@ -245,7 +245,7 @@
 }
 .tiptap th,
 .tiptap td {
-  /* 열 리사이즈 핸들·셀 선택 표시가 absolute 라 셀 기준으로 잡히게 (vault「에디터 표 열 폭 보정」) */
+  /* 열 리사이즈 핸들·셀 선택 표시가 absolute 라 셀 기준으로 잡히게 */
   position: relative;
   padding: 0.6rem 0.75rem;
   border-right: 1px solid #e5e7eb;

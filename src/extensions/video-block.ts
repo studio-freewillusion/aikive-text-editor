@@ -24,6 +24,16 @@ export type VideoAttrs = {
     height: string | number | null;
 };
 
+const videoAttrsOf = (vid: HTMLVideoElement) => ({
+    src: vid.getAttribute('src'),
+    poster: vid.getAttribute('poster'),
+    controls: true,
+    autoplay: vid.hasAttribute('autoplay'),
+    loop: vid.hasAttribute('loop'),
+    muted: vid.hasAttribute('muted'),
+    playsinline: true,
+});
+
 export const VideoBlock = Node.create({
     name: 'videoBlock',
     group: 'block',
@@ -50,23 +60,14 @@ export const VideoBlock = Node.create({
         return [
             {
                 tag: 'div[data-type="videoBlock"]',
+                getAttrs: (el) => {
+                    const vid = (el as HTMLElement).querySelector('video');
+                    return vid ? videoAttrsOf(vid) : null;
+                },
             },
             {
                 tag: 'video',
-                getAttrs: (el) => {
-                    const vid = el as HTMLVideoElement;
-                    return {
-                        src: vid.getAttribute('src'),
-                        poster: vid.getAttribute('poster'),
-                        // width: vid.getAttribute('width'),
-                        // height: vid.getAttribute('height'),
-                        controls: vid.hasAttribute('controls') || true,
-                        autoplay: vid.hasAttribute('autoplay'),
-                        loop: vid.hasAttribute('loop'),
-                        muted: vid.hasAttribute('muted'),
-                        playsinline: vid.hasAttribute('playsinline') || true,
-                    };
-                },
+                getAttrs: (el) => videoAttrsOf(el as HTMLVideoElement),
             },
         ];
     },
