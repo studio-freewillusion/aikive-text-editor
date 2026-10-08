@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/core';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_FEATURES, type Features } from '../src/editor';
@@ -176,5 +176,33 @@ describe('Toolbar', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
     expect(onNotice).toHaveBeenCalledWith(expect.stringContaining('유효하지 않은 URL'), 'error');
     expect(editor.getHTML()).not.toContain('<a');
+  });
+  it('밀어서 넘기는 툴바는 더 넘길 쪽 끝을 흐리게 표시한다', () => {
+    createEditor('<p>a</p>');
+    render(
+      <Toolbar
+        editor={editor}
+        features={DEFAULT_FEATURES}
+        sourceMode={false}
+        onToggleSource={() => {}}
+        onNotice={() => {}}
+        scrollable
+      />,
+    );
+    const bar = screen.getByRole('toolbar');
+    Object.defineProperty(bar, 'scrollWidth', { configurable: true, value: 500 });
+    Object.defineProperty(bar, 'clientWidth', { configurable: true, value: 200 });
+    const scrollTo = (left: number) => {
+      bar.scrollLeft = left;
+      fireEvent.scroll(bar);
+    };
+    scrollTo(0);
+    expect(bar).toHaveClass('is-fade-end');
+    expect(bar).not.toHaveClass('is-fade-start');
+    scrollTo(150);
+    expect(bar).toHaveClass('is-fade-start', 'is-fade-end');
+    scrollTo(300);
+    expect(bar).toHaveClass('is-fade-start');
+    expect(bar).not.toHaveClass('is-fade-end');
   });
 });

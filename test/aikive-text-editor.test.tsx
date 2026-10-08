@@ -176,7 +176,7 @@ describe('AikiveTextEditor', () => {
     expect(onSourceModeChange.mock.calls).toEqual([[true], [false]]);
   });
 
-  it('HTML 적용에 실패해 HTML 모드에 머물면 알리지 않는다', async () => {
+  it('HTML 모드에서 글자색·유튜브·모르는 태그가 있어도 적용하고 Text 로 돌아온다', async () => {
     const onSourceModeChange = vi.fn();
     const onNotice = vi.fn();
     const ref = createRef<AikiveTextEditorHandle>();
@@ -185,9 +185,17 @@ describe('AikiveTextEditor', () => {
     );
     await waitFor(() => expect(ref.current?.getHTML()).toBe('<p>a</p>'));
     act(() => ref.current!.setSourceMode(true));
-    fireEvent.change(screen.getByLabelText('HTML 소스'), { target: { value: '<custom-x>b</custom-x>' } });
+    const html =
+      '<p><span style="color: rgb(220, 38, 38);">빨강</span></p>' +
+      '<div data-youtube-video=""><iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID"></iframe></div>' +
+      '<custom-x>모르는 태그</custom-x>';
+    fireEvent.change(screen.getByLabelText('HTML 소스'), { target: { value: html } });
     act(() => ref.current!.setSourceMode(false));
-    expect(onNotice).toHaveBeenCalledWith(expect.any(String), 'error');
-    expect(onSourceModeChange).not.toHaveBeenCalledWith(false);
+    expect(onNotice).not.toHaveBeenCalled();
+    expect(onSourceModeChange).toHaveBeenLastCalledWith(false);
+    const out = ref.current!.getHTML();
+    expect(out).toContain('<span style="color: rgb(220, 38, 38);">빨강</span>');
+    expect(out).toContain('src="https://www.youtube-nocookie.com/embed/VIDEO_ID"');
+    expect(out).toContain('모르는 태그');
   });
 });

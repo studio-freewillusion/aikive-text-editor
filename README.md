@@ -7,10 +7,19 @@ tiptap 기반 리치 텍스트 에디터와 본문 뷰어 (React)
 npm 에 올리기 전까지는 GitHub Release 의 `.tgz` 주소로 설치합니다.
 
 ```bash
-npm install https://github.com/studio-freewillusion/aikive-text-editor/releases/download/v0.1.0/studio-freewillusion-aikive-text-editor-0.1.0.tgz
+npm install https://github.com/studio-freewillusion/aikive-text-editor/releases/download/v0.1.2/studio-freewillusion-aikive-text-editor-0.1.2.tgz
 ```
 
 React 19 가 필요합니다(`peerDependencies`).
+
+설치한 뒤 `prosemirror-model` 이 한 벌만 깔렸는지 확인합니다. 두 벌이면 에디터를 열 때 플러그인 충돌로 멈춥니다(lockfile 에 옛 버전이 남아 있을 때 생깁니다).
+
+```bash
+npm ls prosemirror-model                          # npm — 버전이 하나여야 한다
+pnpm why prosemirror-model                        # pnpm
+pnpm update --depth Infinity "prosemirror-*"      # 두 벌이면(pnpm)
+npm dedupe                                        # 두 벌이면(npm)
+```
 
 ## 진입점
 
@@ -19,6 +28,7 @@ React 19 가 필요합니다(`peerDependencies`).
 | `@studio-freewillusion/aikive-text-editor/viewer` | `AikiveTextViewer`, `toPlainText`, `sanitizeRichHtml` — tiptap 을 불러오지 않아 서버 렌더링에 씁니다 |
 | `@studio-freewillusion/aikive-text-editor/editor` | `AikiveTextEditor` — 브라우저 전용(`'use client'`) |
 | `@studio-freewillusion/aikive-text-editor/styles.css` | 본문·툴바 스타일 |
+| `@studio-freewillusion/aikive-text-editor/content-guide.md` | AI 에게 본문 작성을 맡길 때 넘기는 HTML 형식 안내([docs/content-guide.md](docs/content-guide.md)) |
 
 ## 본문 보기
 
