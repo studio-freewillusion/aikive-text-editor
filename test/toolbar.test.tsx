@@ -134,4 +134,47 @@ describe('Toolbar', () => {
     renderToolbar();
     expect(screen.queryByLabelText('글꼴')).toBeNull();
   });
+  it('이미지를 고르고 링크 연결을 누르면 이미지에 링크를 걸고 버튼이 활성으로 보인다', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValueOnce('example.com');
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    createEditor('<img src="https://cdn.example.com/a.png">');
+    editor.commands.setNodeSelection(0);
+    renderToolbar();
+    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
+    expect(editor.getHTML()).toContain('<a href="https://example.com" target="_blank"');
+    expect(await screen.findByRole('button', { name: '링크 연결' })).toHaveClass('is-active');
+  });
+
+  it('이미지 링크를 같은 탭으로 다시 걸면 target 과 rel 이 남지 않는다', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValueOnce('https://example.com');
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
+    createEditor('<a href="https://example.com" target="_blank"><img src="https://cdn.example.com/a.png"></a>');
+    editor.commands.setNodeSelection(0);
+    renderToolbar();
+    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
+    expect(editor.getHTML()).toContain('<a href="https://example.com"');
+    expect(editor.getHTML()).not.toMatch(/target=|rel=/);
+  });
+
+  it('이미지 링크 주소를 비우면 링크만 풀고 이미지는 남긴다', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValueOnce('');
+    createEditor('<a href="https://example.com"><img src="https://cdn.example.com/a.png"></a>');
+    editor.commands.setNodeSelection(0);
+    renderToolbar();
+    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
+    expect(editor.getHTML()).not.toContain('<a');
+    expect(editor.getHTML()).toContain('<img');
+  });
+
+  it('이미지에 http·https 가 아닌 주소를 넣으면 onNotice 로 안내한다', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValueOnce('javascript:alert(1)');
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    createEditor('<img src="https://cdn.example.com/a.png">');
+    editor.commands.setNodeSelection(0);
+    const onNotice = vi.fn();
+    renderToolbar({ onNotice });
+    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
+    expect(onNotice).toHaveBeenCalledWith(expect.stringContaining('유효하지 않은 URL'), 'error');
+    expect(editor.getHTML()).not.toContain('<a');
+  });
 });

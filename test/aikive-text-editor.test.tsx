@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/react';
@@ -143,5 +143,51 @@ describe('AikiveTextEditor', () => {
     const out = ref.current!.getHTML();
     expect(out).toContain('poster="https://cdn.example.com/a.jpg"');
     expect(out).toContain('loop=""');
+  });
+  it('HTML 모드가 실제로 바뀔 때만 onSourceModeChange 로 알린다', async () => {
+    const onSourceModeChange = vi.fn();
+    const ref = createRef<AikiveTextEditorHandle>();
+    render(<AikiveTextEditor ref={ref} initialContent="<p>a</p>" onSourceModeChange={onSourceModeChange} />);
+    await waitFor(() => expect(ref.current?.getHTML()).toBe('<p>a</p>'));
+    act(() => {
+      ref.current!.setSourceMode(true);
+      ref.current!.setSourceMode(true);
+    });
+    expect(onSourceModeChange.mock.calls).toEqual([[true]]);
+    act(() => ref.current!.setSourceMode(false));
+    expect(onSourceModeChange.mock.calls).toEqual([[true], [false]]);
+    act(() => ref.current!.setSourceMode(true));
+    act(() => ref.current!.resetContent('<p>b</p>'));
+    expect(onSourceModeChange.mock.calls).toEqual([[true], [false], [true]]);
+    act(() => ref.current!.setSourceMode(true));
+    expect(onSourceModeChange.mock.calls).toEqual([[true], [false], [true], [true]]);
+  });
+
+  it('같은 tick 에 HTML 모드를 켰다 끄면 본문은 그대로다', async () => {
+    const onSourceModeChange = vi.fn();
+    const ref = createRef<AikiveTextEditorHandle>();
+    render(<AikiveTextEditor ref={ref} initialContent="<p>a</p>" onSourceModeChange={onSourceModeChange} />);
+    await waitFor(() => expect(ref.current?.getHTML()).toBe('<p>a</p>'));
+    act(() => {
+      ref.current!.setSourceMode(true);
+      ref.current!.setSourceMode(false);
+    });
+    expect(ref.current!.getHTML()).toBe('<p>a</p>');
+    expect(onSourceModeChange.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('HTML 적용에 실패해 HTML 모드에 머물면 알리지 않는다', async () => {
+    const onSourceModeChange = vi.fn();
+    const onNotice = vi.fn();
+    const ref = createRef<AikiveTextEditorHandle>();
+    render(
+      <AikiveTextEditor ref={ref} initialContent="<p>a</p>" onSourceModeChange={onSourceModeChange} onNotice={onNotice} />,
+    );
+    await waitFor(() => expect(ref.current?.getHTML()).toBe('<p>a</p>'));
+    act(() => ref.current!.setSourceMode(true));
+    fireEvent.change(screen.getByLabelText('HTML 소스'), { target: { value: '<custom-x>b</custom-x>' } });
+    act(() => ref.current!.setSourceMode(false));
+    expect(onNotice).toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(onSourceModeChange).not.toHaveBeenCalledWith(false);
   });
 });

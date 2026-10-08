@@ -115,7 +115,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       isCenter: ed.isActive({ textAlign: 'center' }),
       isRight: ed.isActive({ textAlign: 'right' }),
       isJustify: ed.isActive({ textAlign: 'justify' }),
-      isLink: ed.isActive('link'),
+      isLink: ed.isActive('link') || !!ed.getAttributes('image').href,
       isTable: ed.isActive('table'),
       fontSize: (ed.getAttributes('textStyle').fontSize as string | undefined) ?? '',
       lineHeight: (ed.getAttributes('textStyle').lineHeight as string | undefined) ?? '',
@@ -123,24 +123,26 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
   });
 
   const setLink = useCallback(() => {
-    const previousUrl = editor.getAttributes('link').href;
+    // 이미지는 링크 서식이 안 붙어 이미지 속성으로 건다
+    const isImage = editor.isActive('image');
+    const previousUrl = isImage ? editor.getAttributes('image').href : editor.getAttributes('link').href;
     const url = window.prompt('URL', previousUrl);
     if (url === null) return;
     if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      if (isImage) editor.chain().focus().unsetImageLink().run();
+      else editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
     const openInNewTab = window.confirm('새 탭에서 열까요? (확인 = 새 탭, 취소 = 같은 탭)');
-    const applied = editor
-      .chain()
-      .focus()
-      .extendMarkRange('link')
-      .setLink({
-        href: url,
-        target: openInNewTab ? '_blank' : null,
-        rel: openInNewTab ? 'noopener noreferrer' : null,
-      })
-      .run();
+    const target = openInNewTab ? '_blank' : null;
+    const applied = isImage
+      ? editor.chain().focus().setImageLink({ href: url, target }).run()
+      : editor
+          .chain()
+          .focus()
+          .extendMarkRange('link')
+          .setLink({ href: url, target, rel: openInNewTab ? 'noopener noreferrer' : null })
+          .run();
     // 주소가 검사에 걸리면 명령은 false 만 돌려준다 — 입력 직후에만 알린다
     if (!applied) onNotice('유효하지 않은 URL 입니다. http:// 또는 https:// 주소만 넣을 수 있습니다.', 'error');
   }, [editor, onNotice]);

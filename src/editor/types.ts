@@ -43,6 +43,7 @@ export interface AikiveTextEditorProps {
   onChange?: (html: string) => void;
   onUploadImage?: (file: File) => Promise<string>;
   onNotice?: (message: string, kind: NoticeKind) => void;
+  onSourceModeChange?: (on: boolean) => void;
   className?: string;
   contentClassName?: string;
 }

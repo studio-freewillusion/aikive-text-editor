@@ -142,7 +142,6 @@
   /* code block */
 }
 .tiptap pre {
-  scrollbar-width: thin;
   margin: 1rem 0;
   padding: 0.9rem 1rem;
   border-radius: 12px;
@@ -311,10 +310,22 @@
   cursor: col-resize !important;
 }
 .tiptap .tableWrapper {
-  scrollbar-width: thin;
   overflow-x: auto;
 }
 
 .prosemirror-dropcursor-block {
   background-color: white !important;
+}
+
+/* 표·코드 블록 가로 막대 — 평소 숨기고 올렸을 때만 보인다 */
+.tiptap pre,
+.tiptap .tableWrapper {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.tiptap pre:hover,
+.tiptap pre:focus-within,
+.tiptap .tableWrapper:hover,
+.tiptap .tableWrapper:focus-within {
+  scrollbar-color: var(--aikive-text-scrollbar) transparent;
 }

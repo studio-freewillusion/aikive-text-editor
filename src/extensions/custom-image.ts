@@ -485,7 +485,7 @@ class CustomImageNodeView implements NodeView {
         this.elements.container.appendChild(control);
     }
 
-    // 버블 메뉴는 이미지를 고르면 숨으므로, 이미지 링크는 이 컨트롤 바에서만 걸 수 있다.
+    // 말풍선 툴바는 이미지를 고르면 숨어, 거기서는 이 컨트롤 바로만 링크를 건다.
     private createLinkButton() {
         const button = document.createElement('button');
         button.type = 'button';
