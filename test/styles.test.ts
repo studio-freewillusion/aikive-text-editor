@@ -13,5 +13,9 @@ describe('styles.css', () => {
     expect(css).toContain('var(--aikive-text-fg');
     expect(css).toContain('var(--aikive-text-link');
     expect(css).toContain('.aikive-toolbar');
+    // 표·코드 블록 가로 막대는 평소 숨기고 올렸을 때만 보인다(기존 화면과 같게)
+    expect(css).toMatch(/\.tiptap pre,\s*\.tiptap \.tableWrapper\s*\{[^}]*scrollbar-color: transparent transparent/);
+    expect(css).toMatch(/\.tiptap pre:hover[^{]*\{[^}]*scrollbar-color: var\(--aikive-text-scrollbar\) transparent/);
+    expect(css).toContain('--aikive-text-scrollbar: rgba(255, 255, 255, 0.42)');
   }, 180_000);
 });

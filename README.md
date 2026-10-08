@@ -73,6 +73,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `onChange(html)` | 내용이 바뀔 때. 빈 에디터면 `''` |
 | `onUploadImage(file)` | 이미지를 올리고 주소를 돌려줌. 없으면 이미지 넣기를 숨김 |
 | `onNotice(message, kind)` | 안내 문구(`'info'`·`'error'`). 없으면 콘솔 경고 |
+| `onSourceModeChange(on)` | HTML 모드가 실제로 바뀔 때. HTML 적용에 실패하면 부르지 않음. `resetContent`·`restoreSnapshot` 이 끌 때도 부르지 않음. 바깥 토글은 `setSourceMode` 를 부르고, 토글 상태는 이 콜백으로만 바꿀 것 |
 
 **features** — 기본값은 모두 `true`. 끈 기능은 버튼만 숨기고, 이미 들어 있는 내용은 보존합니다.
 
@@ -112,6 +113,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `--aikive-text-bg` | `#18181a` |
 | `--aikive-text-fg` | `#e4e6e7` |
 | `--aikive-text-link` | `#46add4` |
+| `--aikive-text-scrollbar` | `rgba(255, 255, 255, 0.42)` |
 | `--aikive-toolbar-bg` | `#28282b` |
 | `--aikive-toolbar-fg` | `#ebebeb` |
 | `--aikive-toolbar-border` | `#525259` |
