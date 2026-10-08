@@ -1,0 +1,320 @@
+/* 본문 스타일 — 뷰어·에디터 공통. 값은 사용자 화면 기준 */
+@charset "UTF-8";
+.tiptap {
+  color: var(--aikive-text-fg, #e4e6e7);
+  /* layout */
+}
+.tiptap:first-child {
+  height: 100%;
+}
+.tiptap > * + * {
+  margin-top: 0.75rem;
+}
+.tiptap {
+  /* paragraphs */
+}
+.tiptap p {
+  margin: 0;
+  line-height: 1.65;
+}
+.tiptap {
+  /* 빈 문단(<p></p>)도 line box가 생기도록 zero-width space를 넣어 줄 높이만큼 여백을 유지한다.
+     (내용이 없으면 inline content가 없어 line box가 안 생겨 height 0으로 collapse되는 문제 방지) */
+}
+.tiptap p:empty::before {
+  content: "​";
+}
+.tiptap p + p {
+  margin-top: 0.4rem;
+}
+.tiptap * + p {
+  margin-top: 0.75rem;
+}
+.tiptap {
+  /* lists */
+}
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.4rem;
+  margin: 0.5rem 0 0.75rem;
+}
+.tiptap ul {
+  list-style: disc;
+}
+.tiptap ul ul {
+  list-style: circle;
+}
+.tiptap ul ul ul {
+  list-style: square;
+}
+.tiptap ol {
+  list-style: decimal;
+}
+.tiptap li {
+  margin: 0.25rem 0;
+}
+.tiptap li p {
+  margin: 0.15rem 0;
+}
+.tiptap {
+  /* headings */
+}
+.tiptap h1,
+.tiptap h2,
+.tiptap h3,
+.tiptap h4,
+.tiptap h5,
+.tiptap h6 {
+  margin: 1.25rem 0 0.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-wrap: pretty;
+}
+.tiptap h1 {
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+  margin-top: 2rem;
+}
+.tiptap h2 {
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+  margin-top: 1.75rem;
+}
+.tiptap h3 {
+  font-size: 1.25rem;
+}
+.tiptap h4 {
+  font-size: 1.125rem;
+}
+.tiptap h5 {
+  font-size: 1rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.tiptap h6 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.tiptap {
+  /* inline marks */
+}
+.tiptap a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.tiptap a:not([style*=color]) {
+  color: var(--aikive-text-link, #46add4);
+}
+.tiptap strong {
+  font-weight: 700;
+}
+.tiptap em {
+  font-style: italic;
+}
+.tiptap u {
+  text-decoration: underline;
+}
+.tiptap s,
+.tiptap del {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.tiptap mark {
+  padding: 0 0.1em;
+  border-radius: 2px;
+  background: #fff2ac;
+  color: inherit;
+}
+.tiptap {
+  /* inline code */
+}
+.tiptap code {
+  padding: 0.15em 0.35em;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+  font-size: 0.95em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+.tiptap {
+  /* code block */
+}
+.tiptap pre {
+  scrollbar-width: thin;
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+  line-height: 1.55;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+.tiptap pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.9em;
+  white-space: pre;
+}
+.tiptap {
+  /* blockquote */
+}
+.tiptap blockquote {
+  margin: 0.9rem 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  background: #f8fafc;
+  border-left: 3px solid #e5e7eb;
+}
+.tiptap {
+  /* horizontal rule */
+}
+.tiptap hr {
+  margin: 1.25rem 0;
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+}
+.tiptap {
+  /* emoji (tiptap-emoji) */
+}
+.tiptap [data-type=emoji] img {
+  width: 1em;
+  height: 1em;
+}
+.tiptap {
+  /* task list (if enabled) */
+}
+.tiptap ul[data-type=taskList] {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0;
+}
+.tiptap ul[data-type=taskList] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0.3rem 0;
+}
+.tiptap ul[data-type=taskList] li > label {
+  margin-top: 0.15rem;
+}
+.tiptap ul[data-type=taskList] li > label input[type=checkbox] {
+  display: grid;
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  appearance: none;
+  place-items: center;
+}
+.tiptap ul[data-type=taskList] li > label input[type=checkbox]::after {
+  width: 0.55rem;
+  height: 0.55rem;
+  background: #2563eb;
+  transition: transform 0.12s ease;
+  content: "";
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%);
+  transform: scale(0);
+}
+.tiptap ul[data-type=taskList] li[data-checked=true] > label input[type=checkbox]::after {
+  transform: scale(1);
+}
+.tiptap ul[data-type=taskList] li[data-checked=true] > div {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+.tiptap {
+  /* tables */
+}
+.tiptap table {
+  width: 100%;
+  /* 열 리사이즈 인라인 px 가 에디터 폭을 못 넘게. min-width 가 max-width 를 이기므로 !important */
+  min-width: 0 !important;
+  max-width: 100%;
+  margin: 1rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.tiptap th,
+.tiptap td {
+  /* 열 리사이즈 핸들·셀 선택 표시가 absolute 라 셀 기준으로 잡히게 */
+  position: relative;
+  padding: 0.6rem 0.75rem;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
+}
+.tiptap th {
+  font-weight: 600;
+}
+.tiptap tr:last-child td {
+  border-bottom: 0;
+}
+.tiptap tr td:last-child,
+.tiptap tr th:last-child {
+  border-right: 0;
+}
+.tiptap img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.tiptap > div:has(> img) {
+  max-width: 100%;
+}
+.tiptap > img:not(:first-child), .tiptap > div:has(> img):not(:first-child) {
+  margin-top: 0.75rem !important;
+}
+.tiptap .youtube {
+  width: 100%;
+  height: 480px;
+}
+@media screen and (max-width: 1199px) {
+  .tiptap .youtube {
+    height: 360px;
+  }
+}
+.tiptap [data-type=videoBlock] video {
+  height: 480px;
+}
+@media screen and (max-width: 1199px) {
+  .tiptap [data-type=videoBlock] video {
+    height: 360px;
+  }
+}
+.tiptap .selectedCell::after {
+  position: absolute;
+  inset: 0;
+  background: rgba(70, 173, 212, 0.14);
+  pointer-events: none;
+  content: "";
+}
+.tiptap .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: 0;
+  width: 4px;
+  background: #46add4;
+  pointer-events: none;
+}
+.tiptap.ProseMirror.resize-cursor {
+  cursor: ew-resize !important;
+  cursor: col-resize !important;
+}
+.tiptap .tableWrapper {
+  scrollbar-width: thin;
+  overflow-x: auto;
+}
+
+.prosemirror-dropcursor-block {
+  background-color: white !important;
+}
