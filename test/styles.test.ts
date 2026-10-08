@@ -17,5 +17,8 @@ describe('styles.css', () => {
     expect(css).toMatch(/\.tiptap pre,\s*\.tiptap \.tableWrapper\s*\{[^}]*scrollbar-color: transparent transparent/);
     expect(css).toMatch(/\.tiptap pre:hover[^{]*\{[^}]*scrollbar-color: var\(--aikive-text-scrollbar\) transparent/);
     expect(css).toContain('--aikive-text-scrollbar: rgba(255, 255, 255, 0.42)');
+    // 터치 기기 고정 툴바는 밀어서 넘기므로 가로 막대를 숨긴다
+    expect(css).toMatch(/\.aikive-toolbar\.is-scrollable\s*\{[^}]*scrollbar-width: none/);
+    expect(css).toMatch(/\.aikive-toolbar\.is-scrollable::-webkit-scrollbar\s*\{[^}]*display: none/);
   }, 180_000);
 });

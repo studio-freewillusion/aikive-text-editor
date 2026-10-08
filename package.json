@@ -1,6 +1,6 @@
 {
   "name": "@studio-freewillusion/aikive-text-editor",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Rich text editor and viewer built on tiptap",
   "license": "MIT",
   "type": "module",
@@ -16,10 +16,12 @@
       "types": "./dist/editor.d.ts",
       "import": "./dist/editor.js"
     },
-    "./styles.css": "./dist/styles.css"
+    "./styles.css": "./dist/styles.css",
+    "./content-guide.md": "./docs/content-guide.md"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs/content-guide.md"
   ],
   "scripts": {
     "build": "rm -rf dist && tsup && esbuild src/styles/index.css --bundle --outfile=dist/styles.css --log-level=warning",

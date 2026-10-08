@@ -40,8 +40,14 @@
   color: var(--aikive-toolbar-fg);
 }
 
+/* 터치 기기 고정 툴바는 밀어서 넘긴다 — 가로 막대는 숨긴다 */
 .aikive-toolbar.is-scrollable {
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.aikive-toolbar.is-scrollable::-webkit-scrollbar {
+  display: none;
 }
 
 .aikive-toolbar__select {
