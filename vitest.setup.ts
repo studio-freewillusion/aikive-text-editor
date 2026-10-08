@@ -7,3 +7,11 @@ if (typeof globalThis.ClipboardEvent === 'undefined') {
   }
   (globalThis as unknown as { ClipboardEvent: typeof Event }).ClipboardEvent = ClipboardEventShim;
 }
+
+// jsdom Range 에 화면 좌표 함수가 없어 ProseMirror 의 스크롤 계산이 터진다
+if (!Range.prototype.getClientRects) {
+  Range.prototype.getClientRects = () => ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
+}
+if (!Range.prototype.getBoundingClientRect) {
+  Range.prototype.getBoundingClientRect = () => new DOMRect();
+}
