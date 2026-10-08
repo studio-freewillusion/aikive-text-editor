@@ -2,6 +2,7 @@ import { EditorState } from '@tiptap/pm/state';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { parseContent } from './parse-content';
+import { attachFiles, type FileDeps } from './attach-files';
 import { applySourceContent, SOURCE_HTML_ERROR_MESSAGE } from './source-mode';
 import { buildExtensions } from './use-editor-setup';
 import type { AikiveTextEditorHandle, AikiveTextEditorProps, NoticeKind, Snapshot } from './types';
@@ -9,13 +10,15 @@ import type { AikiveTextEditorHandle, AikiveTextEditorProps, NoticeKind, Snapsho
 const htmlOf = (editor: Editor) => (editor.isEmpty ? '' : editor.getHTML());
 
 export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEditorProps>(function AikiveTextEditor(
-  { initialContent, editable = true, htmlClassNames, onChange, onNotice, className, contentClassName },
+  { initialContent, editable = true, htmlClassNames, onChange, onUploadImage, onNotice, className, contentClassName },
   ref,
 ) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const noticeRef = useRef(onNotice);
   noticeRef.current = onNotice;
+  const uploadRef = useRef(onUploadImage);
+  uploadRef.current = onUploadImage;
   const [sourceMode, setSourceModeState] = useState(false);
   const [sourceText, setSourceText] = useState('');
 
@@ -23,13 +26,19 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     if (noticeRef.current) noticeRef.current(message, kind);
     else console.warn(message);
   };
+  // 확장은 한 번만 만들어지므로 최신 콜백을 ref 로 읽는다
+  const fileDeps = (): FileDeps => ({ upload: uploadRef.current, notice });
 
   const editor = useEditor({
     immediatelyRender: false,
     editable,
-    extensions: buildExtensions(editable, htmlClassNames),
+    extensions: buildExtensions(editable, htmlClassNames, fileDeps),
     content: parseContent(initialContent),
-    editorProps: { attributes: { class: 'tiptap' } },
+    editorProps: {
+      attributes: { class: 'tiptap' },
+      // 바깥에서 붙여넣은 영상은 새 첨부로 막는다 — 같은 에디터 안 복사·이동은 이 경로를 안 탄다
+      transformPastedHTML: (html) => html.replace(/<video[\s\S]*?<\/video>/gi, '').replace(/<video[^>]*\/?>/gi, ''),
+    },
     onUpdate: ({ editor: ed }) => onChangeRef.current?.(htmlOf(ed)),
   });
 
@@ -74,7 +83,9 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         onChangeRef.current?.(htmlOf(editor));
       },
       isEmpty: () => !editor || editor.isEmpty,
-      insertFiles: async () => {},
+      insertFiles: async (files) => {
+        if (editor) await attachFiles(editor, files, editor.state.selection.anchor, fileDeps());
+      },
       focus: () => {
         editor?.commands.focus();
       },
