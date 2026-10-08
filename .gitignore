@@ -1,0 +1,8 @@
+node_modules
+dist
+golden/
+test-results/
+playwright-report/
+*.tgz
+.claude/
+.superpowers/
