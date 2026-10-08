@@ -1,4 +1,4 @@
-// 이미지는 block 노드라 link mark 가 안 붙는다 — 링크는 노드 속성으로 들고 출력할 때만 <a> 로 감싼다 (vault「에디터 이미지 링크」)
+// 이미지는 block 노드라 link mark 가 안 붙는다 — 링크는 노드 속성으로 들고 출력할 때만 <a> 로 감싼다
 export const safeImageHref = (value: unknown) => {
     if (typeof value !== 'string') {
         return null;
