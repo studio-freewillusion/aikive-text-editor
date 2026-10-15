@@ -247,10 +247,12 @@ test('끝이 인용·목록이거나 빈 줄까지 고른 선택도 말풍선 �
   expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
 });
 
-test('말풍선 툴바 폭이 바뀌면 위치를 다시 잡아 오른쪽 글에 붙어 있다', async ({ page }) => {
+for (const startEditable of [true, false]) {
+test(`말풍선 툴바 폭이 바뀌면 위치를 다시 잡아 오른쪽 글에 붙어 있다(${startEditable ? '처음부터 편집' : '편집을 나중에 켬'})`, async ({ page }) => {
   await page.setViewportSize({ width: 1300, height: 800 });
   const cell = (t: string) => `<td><p style="text-align: right">${t}</p></td>`;
-  await page.goto('/?toolbar=bubble&content=' + encodeURIComponent(`<p style="text-align: right">오른쪽 글</p><table><tbody><tr>${cell('셀1')}${cell('셀2')}</tr></tbody></table>`));
+  await page.goto(`/?toolbar=bubble${startEditable ? '' : '&editable=false'}&content=` + encodeURIComponent(`<p style="text-align: right">오른쪽 글</p><table><tbody><tr>${cell('셀1')}${cell('셀2')}</tr></tbody></table>`));
+  if (!startEditable) await page.getByRole('button', { name: '편집 전환' }).click();
   const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
   const bar = page.getByRole('toolbar', { name: '서식' });
   await page.locator('.ProseMirror td p').last().click();
@@ -262,3 +264,4 @@ test('말풍선 툴바 폭이 바뀌면 위치를 다시 잡아 오른쪽 글에
   const box = (await bar.boundingBox())!;
   expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
 });
+}

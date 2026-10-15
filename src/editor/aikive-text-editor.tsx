@@ -287,7 +287,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [editor, useBubble, bubblePluginKey]);
+  }, [editor, editable, useBubble, bubblePluginKey]);
   // 말풍선은 화면이 아니라 에디터 좌우 안에서만 밀어, 본문 밖(제목 칸 등)으로 나가지 않게 한다
   const bubbleShift = rootEl ? { boundary: rootEl, padding: 0 } : true;
 
