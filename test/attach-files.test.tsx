@@ -239,4 +239,99 @@ describe('파일 넣기', () => {
     });
     expect(screen.getByRole('button', { name: 'HTML 모드' })).not.toBeDisabled();
   });
+
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+  const DROPPED = '올리던 이미지는 넣지 않았습니다. 다시 첨부해 주세요.';
+
+  it('넣은 뒤 다른 본문으로 바뀌고 남은 업로드가 버려지면 그 본문을 건드리지 않는다', async () => {
+    const a = deferred();
+    const b = deferred();
+    const upload = vi.fn().mockReturnValueOnce(a.promise).mockReturnValueOnce(b.promise);
+    const { ref, ed } = await setup(upload);
+    act(() => ref.current!.resetContent('<p>Second tab text</p>'));
+    const snapshotB = ref.current!.takeSnapshot()!;
+    act(() => ref.current!.resetContent('<p>A</p>'));
+    act(() => ed.commands.setTextSelection(2));
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([png('a.png'), png('b.png')]);
+    });
+    await act(async () => {
+      a.resolve('https://cdn.example.com/public/a.png');
+      await flush();
+    });
+    act(() => ref.current!.restoreSnapshot(snapshotB));
+    await act(async () => {
+      b.resolve('https://cdn.example.com/public/b.png');
+      await done;
+    });
+    expect(ref.current!.getHTML()).toBe('<p>Second tab text</p>');
+  });
+
+  it('버려진 업로드의 자리 표시는 예전 본문으로 돌아가도 남지 않는다', async () => {
+    const d = deferred();
+    const { ref, ed } = await setup(() => d.promise);
+    act(() => ref.current!.resetContent('<p>탭 B</p>'));
+    const snapshotB = ref.current!.takeSnapshot()!;
+    act(() => ref.current!.resetContent('<p>탭 A</p>'));
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([png('a.png')]);
+    });
+    const snapshotA = ref.current!.takeSnapshot()!;
+    act(() => ref.current!.restoreSnapshot(snapshotB));
+    await act(async () => {
+      d.resolve('https://cdn.example.com/public/a.png');
+      await done;
+    });
+    act(() => ref.current!.restoreSnapshot(snapshotA));
+    expect(ed.view.dom.querySelector('.aikive-upload-placeholder')).toBeNull();
+  });
+
+  it('올리는 중에 본문을 오갔다 돌아오면 그 본문에 이미지를 넣는다', async () => {
+    const d = deferred();
+    const { ref, ed } = await setup(() => d.promise);
+    act(() => ref.current!.resetContent('<p>탭 B</p>'));
+    const snapshotB = ref.current!.takeSnapshot()!;
+    act(() => ref.current!.resetContent('<p>탭 A</p>'));
+    act(() => ed.commands.setTextSelection(4));
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([png('a.png')]);
+    });
+    const snapshotA = ref.current!.takeSnapshot()!;
+    act(() => ref.current!.restoreSnapshot(snapshotB));
+    act(() => ref.current!.restoreSnapshot(snapshotA));
+    expect(ed.view.dom.querySelectorAll('.aikive-upload-placeholder')).toHaveLength(1);
+    await act(async () => {
+      d.resolve('https://cdn.example.com/public/a.png');
+      await done;
+    });
+    expect(ref.current!.getHTML()).toContain('탭 A');
+    expect(ref.current!.getHTML()).toContain('a.png');
+  });
+
+  it('올리는 중에 또 고른 이미지도 같은 빈 문단에서 빠지지 않는다', async () => {
+    const a = deferred();
+    const b = deferred();
+    const upload = vi.fn().mockReturnValueOnce(a.promise).mockReturnValueOnce(b.promise);
+    const { ref, onNotice } = await setup(upload);
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      first = ref.current!.insertFiles([png('a.png')]);
+    });
+    act(() => {
+      second = ref.current!.insertFiles([png('b.png')]);
+    });
+    await act(async () => {
+      a.resolve('https://cdn.example.com/public/a.png');
+      await first;
+      b.resolve('https://cdn.example.com/public/b.png');
+      await second;
+    });
+    expect(ref.current!.getHTML()).toContain('a.png');
+    expect(ref.current!.getHTML()).toContain('b.png');
+    expect(onNotice.mock.calls.filter(([m]) => m === DROPPED)).toHaveLength(0);
+  });
 });

@@ -2,10 +2,15 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 
-type Meta = { add: { id: string; pos: number } } | { remove: string } | { move: { ids: string[]; pos: number } };
+type Meta =
+  | { add: { id: string; pos: number } }
+  | { remove: string }
+  | { move: { ids: string[]; pos: number } }
+  | { keep: string[] };
 
 export interface UploadPlaceholderStorage {
   pending: number;
+  active: Set<string>;
   onChange: ((uploading: boolean) => void) | null;
 }
 
@@ -23,7 +28,7 @@ const placeholderElement = () => {
 export const UploadPlaceholder = Extension.create<Record<string, never>, UploadPlaceholderStorage>({
   name: 'uploadPlaceholder',
   addStorage() {
-    return { pending: 0, onChange: null };
+    return { pending: 0, active: new Set<string>(), onChange: null };
   },
   addProseMirrorPlugins() {
     return [
@@ -48,6 +53,8 @@ export const UploadPlaceholder = Extension.create<Record<string, never>, UploadP
                 tr.doc,
                 ids.map((id) => Decoration.widget(pos, placeholderElement, { id, side: 1 })),
               );
+            } else if (meta && 'keep' in meta) {
+              next = next.remove(next.find(undefined, undefined, (spec) => !meta.keep.includes(spec.id)));
             }
             return next;
           },
@@ -63,8 +70,13 @@ export const UploadPlaceholder = Extension.create<Record<string, never>, UploadP
 export const findUploadPlaceholder = (state: EditorState, id: string): number | null =>
   uploadPlaceholderKey.getState(state)?.find(undefined, undefined, (spec) => spec.id === id)[0]?.from ?? null;
 
+export const placeholdersAt = (state: EditorState, pos: number): string[] =>
+  (uploadPlaceholderKey.getState(state)?.find(pos, pos) ?? []).map((d) => d.spec.id as string);
+
 const storageOf = (editor: { storage: unknown }) =>
   (editor.storage as { uploadPlaceholder?: UploadPlaceholderStorage }).uploadPlaceholder;
+
+export const activeUploads = (editor: { storage: unknown }): Set<string> => storageOf(editor)?.active ?? new Set();
 
 export const uploadPending = (editor: { storage: unknown }): number => storageOf(editor)?.pending ?? 0;
 

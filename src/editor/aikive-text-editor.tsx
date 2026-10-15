@@ -9,7 +9,9 @@ import { Toolbar } from '../ui/toolbar';
 import { InputPopover, type PopoverAnchor } from '../ui/input-popover';
 import {
   openInputPopover,
+  activeUploads,
   uploadPending,
+  uploadPlaceholderKey,
   type InputPopoverBridgeStorage,
   type PopoverKind,
   type UploadPlaceholderStorage,
@@ -210,8 +212,8 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         applySourceMode(false);
         // 플러그인은 지금 것을 쓴다 — 스냅샷 뒤에 붙은 말풍선 툴바 등이 빠지면 안 된다
         editor.view.updateState(snapshot.state.reconfigure({ plugins: editor.state.plugins }));
-        // updateState 는 이벤트를 안 내 툴바 활성 표시가 따라오지 않는다
-        editor.view.dispatch(editor.state.tr);
+        // updateState 는 이벤트를 안 내 툴바 활성 표시가 따라오지 않는다. 스냅샷에 남은 끝난 업로드의 자리 표시도 이때 지운다
+        editor.view.dispatch(editor.state.tr.setMeta(uploadPlaceholderKey, { keep: [...activeUploads(editor)] }));
         return true;
       },
       setSourceMode,

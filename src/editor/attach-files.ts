@@ -1,5 +1,12 @@
 import type { Editor } from '@tiptap/react';
-import { changeUploadPending, findUploadPlaceholder, uploadPlaceholderKey } from '../extensions/upload-placeholder';
+import type { Transaction } from '@tiptap/pm/state';
+import {
+  activeUploads,
+  changeUploadPending,
+  findUploadPlaceholder,
+  placeholdersAt,
+  uploadPlaceholderKey,
+} from '../extensions/upload-placeholder';
 import type { NoticeKind } from './types';
 
 export type Notice = (message: string, kind: NoticeKind) => void;
@@ -43,38 +50,49 @@ export async function attachFiles(editor: Editor, files: File[], pos: number, de
   if (!jobs.length) return;
   const at = Math.min(pos, editor.state.doc.content.size);
   // 자리 표시 위치가 곧 넣을 위치다 — 올리는 동안 고친 내용만큼 함께 옮겨지고, 본문이 바뀌어 사라지면 넣지 않는다
+  const active = activeUploads(editor);
   for (const job of jobs) {
+    active.add(job.id);
     editor.view.dispatch(editor.state.tr.setMeta(uploadPlaceholderKey, { add: { id: job.id, pos: at } }));
   }
   changeUploadPending(editor, jobs.length);
   let lastEnd: number | null = null;
-  for (const [index, job] of jobs.entries()) {
-    let url: string | null = null;
-    try {
-      url = await upload(job.file);
-    } catch {
-      deps.notice(`${job.file.name} 업로드에 실패했습니다. 다시 시도해 주세요.`, 'error');
-    } finally {
-      if (!editor.isDestroyed) changeUploadPending(editor, -1);
+  // 넣은 뒤 다음 파일을 기다리는 동안 고친 내용만큼 줄바꿈 위치를 옮긴다
+  const follow = ({ transaction }: { transaction: Transaction }) => {
+    if (lastEnd !== null) lastEnd = transaction.mapping.map(lastEnd);
+  };
+  editor.on('transaction', follow);
+  try {
+    for (const job of jobs) {
+      let url: string | null = null;
+      try {
+        url = await upload(job.file);
+      } catch {
+        deps.notice(`${job.file.name} 업로드에 실패했습니다. 다시 시도해 주세요.`, 'error');
+      } finally {
+        active.delete(job.id);
+        if (!editor.isDestroyed) changeUploadPending(editor, -1);
+      }
+      if (editor.isDestroyed) return;
+      const where = findUploadPlaceholder(editor.state, job.id);
+      if (where === null) {
+        // 자리 표시가 사라졌다면 본문이 바뀐 것 — 예전 줄바꿈 위치도 다른 본문을 가리키므로 버린다
+        lastEnd = null;
+        if (url) noticeOnce(DROPPED_MESSAGE, 'info');
+        continue;
+      }
+      editor.view.dispatch(editor.state.tr.setMeta(uploadPlaceholderKey, { remove: job.id }));
+      if (!url) continue;
+      // 빈 문단에 넣으면 문단이 이미지로 통째로 바뀌어 같은 자리의 다른 자리 표시(다른 묶음 포함)도 사라진다 — 넣기 전에 모아 이미지 뒤로 옮긴다
+      const rest = placeholdersAt(editor.state, where);
+      editor.chain().focus().insertContentAt(where, { type: 'image', attrs: { src: url } }).run();
+      lastEnd = editor.state.selection.to;
+      if (rest.length) {
+        editor.view.dispatch(editor.state.tr.setMeta(uploadPlaceholderKey, { move: { ids: rest, pos: lastEnd } }));
+      }
     }
-    if (editor.isDestroyed) return;
-    const where = findUploadPlaceholder(editor.state, job.id);
-    if (where === null) {
-      if (url) noticeOnce(DROPPED_MESSAGE, 'info');
-      continue;
-    }
-    editor.view.dispatch(editor.state.tr.setMeta(uploadPlaceholderKey, { remove: job.id }));
-    if (!url) continue;
-    // 빈 문단에 넣으면 문단이 이미지로 통째로 바뀌어 그 안의 남은 자리 표시도 사라진다 — 넣기 전에 살아 있던 것을 이미지 뒤로 옮긴다
-    const rest = jobs
-      .slice(index + 1)
-      .filter((next) => findUploadPlaceholder(editor.state, next.id) !== null)
-      .map((next) => next.id);
-    editor.chain().focus().insertContentAt(where, { type: 'image', attrs: { src: url } }).run();
-    lastEnd = editor.state.selection.to;
-    if (rest.length) {
-      editor.view.dispatch(editor.state.tr.setMeta(uploadPlaceholderKey, { move: { ids: rest, pos: lastEnd } }));
-    }
+  } finally {
+    editor.off('transaction', follow);
   }
   // 이미지 뒤에서 바로 이어 쓰도록 새 줄로 옮긴다(기존 에디터와 같은 동작)
   if (lastEnd !== null) editor.chain().focus(lastEnd).enter().run();

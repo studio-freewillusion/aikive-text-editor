@@ -7,8 +7,10 @@ export { normalizeSourceHTML } from './normalize-source-html';
 export { StoredYoutube } from './stored-youtube';
 export {
   UploadPlaceholder,
+  activeUploads,
   changeUploadPending,
   findUploadPlaceholder,
+  placeholdersAt,
   uploadPending,
   uploadPlaceholderKey,
   type UploadPlaceholderStorage,
