@@ -7,6 +7,7 @@ import {
   placeholdersAt,
   uploadPlaceholderKey,
 } from '../extensions/upload-placeholder';
+import { isInputPopoverOpen } from '../extensions/input-popover-bridge';
 import type { NoticeKind } from './types';
 
 export type Notice = (message: string, kind: NoticeKind) => void;
@@ -62,6 +63,8 @@ export async function attachFiles(editor: Editor, files: File[], pos: number, de
     if (lastEnd !== null) lastEnd = transaction.mapping.map(lastEnd);
   };
   editor.on('transaction', follow);
+  // 입력 창이 열려 있으면 포커스를 빼앗지 않는다 — 창은 열 때의 선택을 따로 기억해 되살린다
+  const chain = () => (isInputPopoverOpen(editor) ? editor.chain() : editor.chain().focus());
   try {
     for (const job of jobs) {
       let url: string | null = null;
@@ -85,7 +88,7 @@ export async function attachFiles(editor: Editor, files: File[], pos: number, de
       if (!url) continue;
       // 빈 문단에 넣으면 문단이 이미지로 통째로 바뀌어 같은 자리의 다른 자리 표시(다른 묶음 포함)도 사라진다 — 넣기 전에 모아 이미지 뒤로 옮긴다
       const rest = placeholdersAt(editor.state, where);
-      editor.chain().focus().insertContentAt(where, { type: 'image', attrs: { src: url } }).run();
+      chain().insertContentAt(where, { type: 'image', attrs: { src: url } }).run();
       lastEnd = editor.state.selection.to;
       if (rest.length) {
         editor.view.dispatch(editor.state.tr.setMeta(uploadPlaceholderKey, { move: { ids: rest, pos: lastEnd } }));
@@ -95,5 +98,5 @@ export async function attachFiles(editor: Editor, files: File[], pos: number, de
     editor.off('transaction', follow);
   }
   // 이미지 뒤에서 바로 이어 쓰도록 새 줄로 옮긴다(기존 에디터와 같은 동작)
-  if (lastEnd !== null) editor.chain().focus(lastEnd).enter().run();
+  if (lastEnd !== null) chain().setTextSelection(lastEnd).enter().run();
 }

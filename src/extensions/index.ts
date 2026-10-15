@@ -15,4 +15,4 @@ export {
   uploadPlaceholderKey,
   type UploadPlaceholderStorage,
 } from './upload-placeholder';
-export { InputPopoverBridge, openInputPopover, type InputPopoverBridgeStorage, type PopoverKind } from './input-popover-bridge';
+export { InputPopoverBridge, isInputPopoverOpen, openInputPopover, type InputPopoverBridgeStorage, type PopoverKind } from './input-popover-bridge';

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Editor } from '@tiptap/react';
 import { createRef } from 'react';
@@ -222,5 +222,82 @@ describe('이미지 조작 바', () => {
     fireEvent.click(document.querySelector('[data-image-control][aria-label="링크 연결"]')!);
     await user.type(screen.getByLabelText('주소'), 'example.com{Enter}');
     expect(ref.current!.getHTML()).toMatch(/<a href="https:\/\/example.com" target="_blank"[^>]*><img/);
+  });
+});
+
+describe('입력 창과 바깥 환경', () => {
+  it('새 탭 체크박스에서 Enter 도 바깥 form 제출을 막는다', async () => {
+    const { ed, user } = await setup({}, () => {});
+    act(() => {
+      ed.commands.selectAll();
+    });
+    await user.click(screen.getByRole('button', { name: '링크 연결' }));
+    const box = screen.getByLabelText('새 탭에서 열기');
+    const event = createEvent.keyDown(box, { key: 'Enter' });
+    fireEvent(box, event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('Esc 는 창만 닫고 바깥 다이얼로그(document 캡처 리스너)까지 가지 않는다', async () => {
+    const outer = vi.fn();
+    document.addEventListener('keydown', outer, true);
+    try {
+      const { ed, user } = await setup();
+      act(() => {
+        ed.commands.selectAll();
+      });
+      await user.click(screen.getByRole('button', { name: '링크 연결' }));
+      fireEvent.keyDown(screen.getByLabelText('주소'), { key: 'Escape' });
+      expect(screen.queryByRole('dialog', { name: '링크' })).toBeNull();
+      expect(outer.mock.calls.filter(([e]) => (e as KeyboardEvent).key === 'Escape')).toHaveLength(0);
+    } finally {
+      document.removeEventListener('keydown', outer, true);
+    }
+  });
+
+  it('transform 된 조상 안에서도 화면 기준 위치에 둔다', async () => {
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    // 다이얼로그의 transform 때문에 fixed 기준점이 화면에서 (100, 50) 만큼 밀린 상황
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (!this.classList.contains('aikive-popover')) return original.call(this);
+      const left = Number.parseFloat(this.style.left) || 0;
+      const top = Number.parseFloat(this.style.top) || 0;
+      return new DOMRect(left + 100, top + 50, 0, 0);
+    });
+    const { ed, user } = await setup();
+    act(() => {
+      ed.commands.selectAll();
+    });
+    await user.click(screen.getByRole('button', { name: '링크 연결' }));
+    const dialog = screen.getByRole('dialog', { name: '링크' });
+    expect(dialog.getBoundingClientRect().left).toBe(8);
+    expect(dialog.getBoundingClientRect().top).toBe(8);
+  });
+
+  it('창이 열린 채 업로드가 끝나도 입력칸 포커스와 고른 글자를 지킨다', async () => {
+    let resolve!: (url: string) => void;
+    const upload = () => new Promise<string>((r) => (resolve = r));
+    const { ref, ed, user } = await setup({ initialContent: '<p>안녕 세상</p>', onUploadImage: upload });
+    act(() => {
+      ed.commands.setTextSelection(6);
+    });
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([new File([new Uint8Array(10)], 'a.png', { type: 'image/png' })]);
+    });
+    act(() => {
+      ed.commands.setTextSelection({ from: 1, to: 3 });
+    });
+    await user.click(screen.getByRole('button', { name: '링크 연결' }));
+    const input = screen.getByLabelText('주소');
+    await user.type(input, 'example.com');
+    await act(async () => {
+      resolve('https://cdn.example.com/public/a.png');
+      await done;
+    });
+    expect(input).toHaveFocus();
+    await user.type(input, '{Enter}');
+    expect(ref.current!.getHTML()).toMatch(/<a [^>]*href="https:\/\/example.com"[^>]*>안녕<\/a>/);
+    expect(ref.current!.getHTML()).toContain('a.png');
   });
 });

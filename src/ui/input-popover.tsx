@@ -1,4 +1,5 @@
 import type { Editor } from '@tiptap/core';
+import type { Transaction } from '@tiptap/pm/state';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { ALT_MAX_LENGTH, applyAlt, applyLink, currentLink, insertYoutube, removeLink } from '../editor/popover-actions';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
@@ -42,13 +43,16 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
     const place = () => {
       const el = ref.current;
       if (!el) return;
-      setPos(
-        placePopover(
-          anchor(),
-          { width: el.offsetWidth, height: el.offsetHeight },
-          { width: window.innerWidth, height: window.innerHeight },
-        ),
+      const rect = el.getBoundingClientRect();
+      // transform 된 조상(다이얼로그 등) 안에서는 fixed 기준이 화면이 아니다 — 지금 그려진 위치와 style 값의 차이로 기준점을 잰다
+      const originX = rect.left - (Number.parseFloat(el.style.left) || 0);
+      const originY = rect.top - (Number.parseFloat(el.style.top) || 0);
+      const target = placePopover(
+        anchor(),
+        { width: el.offsetWidth, height: el.offsetHeight },
+        { width: window.innerWidth, height: window.innerHeight },
       );
+      setPos({ top: target.top - originY, left: target.left - originX });
     };
     place();
     window.addEventListener('resize', place);
@@ -68,19 +72,49 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
     return () => document.removeEventListener('pointerdown', onPointerDown, true);
   }, [onClose]);
 
+  // 바깥 다이얼로그(Radix 등)는 document 캡처로 Esc 를 받아 창보다 먼저 닫힌다 — window 캡처에서 먼저 끊는다
+  useEffect(() => {
+    const onEscape = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape' || !ref.current?.contains(e.target as Node)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      onClose(true);
+    };
+    window.addEventListener('keydown', onEscape, true);
+    return () => window.removeEventListener('keydown', onEscape, true);
+  }, [onClose]);
+
+  // 체크박스 등에서 누른 Enter 도 바깥 form 을 제출하지 않게 한다
   const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== 'Escape') return;
-    e.preventDefault();
-    e.stopPropagation();
-    onClose(true);
+    if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) e.preventDefault();
+  };
+
+  // 열려 있는 동안 업로드 등이 선택을 옮겨도 적용은 열 때 고른 곳에 한다
+  const bookmark = useRef(editor.state.selection.getBookmark());
+  useEffect(() => {
+    const follow = ({ transaction }: { transaction: Transaction }) => {
+      bookmark.current = bookmark.current.map(transaction.mapping);
+    };
+    editor.on('transaction', follow);
+    return () => {
+      editor.off('transaction', follow);
+    };
+  }, [editor]);
+  const restoreSelection = () => {
+    try {
+      editor.view.dispatch(editor.state.tr.setSelection(bookmark.current.resolve(editor.state.doc)));
+    } catch {
+      // 본문이 통째로 바뀌어 예전 위치가 없으면 지금 선택에 적용한다
+    }
   };
 
   const done = () => onClose(true);
-  // 처음 그릴 때 숨겨 두면 autoFocus 가 실패한다 — 위치는 그리기 전에 layout effect 가 잡으므로 숨기지 않는다
   let body: ReactNode = null;
-  if (kind === 'link') body = <LinkForm editor={editor} onDone={done} />;
-  if (kind === 'youtube') body = <YoutubeForm editor={editor} onDone={done} />;
-  if (kind === 'alt') body = <AltForm editor={editor} onDone={done} />;
+  if (kind === 'link') body = <LinkForm editor={editor} prepare={restoreSelection} onDone={done} />;
+  if (kind === 'youtube') body = <YoutubeForm editor={editor} prepare={restoreSelection} onDone={done} />;
+  if (kind === 'alt') body = <AltForm editor={editor} prepare={restoreSelection} onDone={done} />;
+  // 처음부터 숨겨 두면 autoFocus 가 실패한다 — 0,0 에 그린 뒤 화면에 보이기 전에 layout effect 가 옮긴다
+  const style = pos ?? { top: 0, left: 0 };
 
   return (
     <div
@@ -88,12 +122,18 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
       role="dialog"
       aria-label={LABELS[kind]}
       className="aikive-popover"
-      style={pos ?? undefined}
+      style={style}
       onKeyDown={onKeyDown}
     >
       {body}
     </div>
   );
+}
+
+interface FormProps {
+  editor: Editor;
+  prepare: () => void;
+  onDone: () => void;
 }
 
 export function PopoverField({
@@ -141,12 +181,13 @@ export function PopoverField({
   );
 }
 
-function LinkForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
+function LinkForm({ editor, prepare, onDone }: FormProps) {
   const [current] = useState(() => currentLink(editor));
   const [url, setUrl] = useState(current?.href ?? '');
   const [newTab, setNewTab] = useState(current ? current.newTab : true);
   const [error, setError] = useState('');
   const apply = () => {
+    prepare();
     const message = applyLink(editor, url, newTab);
     if (message) setError(message);
     else onDone();
@@ -175,6 +216,7 @@ function LinkForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
             <button
               type="button"
               onClick={() => {
+                prepare();
                 removeLink(editor);
                 onDone();
               }}
@@ -191,10 +233,11 @@ function LinkForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
   );
 }
 
-function YoutubeForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
+function YoutubeForm({ editor, prepare, onDone }: FormProps) {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const apply = () => {
+    prepare();
     const message = insertYoutube(editor, url);
     if (message) setError(message);
     else onDone();
@@ -220,9 +263,10 @@ function YoutubeForm({ editor, onDone }: { editor: Editor; onDone: () => void })
   );
 }
 
-function AltForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
+function AltForm({ editor, prepare, onDone }: FormProps) {
   const [value, setValue] = useState(() => (editor.getAttributes('image').alt as string | undefined) ?? '');
   const apply = () => {
+    prepare();
     applyAlt(editor, value);
     onDone();
   };

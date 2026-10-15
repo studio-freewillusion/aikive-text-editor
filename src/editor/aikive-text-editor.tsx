@@ -133,6 +133,11 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     };
   }, [editor]);
 
+  useEffect(() => {
+    if (!editor) return;
+    (editor.storage as unknown as { inputPopoverBridge: InputPopoverBridgeStorage }).inputPopoverBridge.isOpen = popover !== null;
+  }, [editor, popover]);
+
   const anchorOf = useCallback((): PopoverAnchor => {
     if (!editor) return { left: 0, top: 0, bottom: 0 };
     const { view } = editor;
