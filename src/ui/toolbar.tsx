@@ -506,14 +506,19 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     const onPointerDown = (e: PointerEvent) => {
       if (!wrapRef.current?.contains(e.target as Node)) setMoreOpen(false);
     };
+    // 바깥 다이얼로그(Radix 등)가 document 캡처에서 Esc 를 먼저 받아 통째로 닫히지 않게 window 캡처에서 끊는다
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMoreOpen(false);
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setMoreOpen(false);
+      barRef.current?.querySelector<HTMLButtonElement>('[aria-label="더 보기"]')?.focus();
     };
     document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keydown', onKeyDown, true);
     };
   }, [moreOpen]);
 

@@ -305,3 +305,23 @@ test('넓은 에디터에서는 더 보기 없이 모든 항목이 한 줄에 �
   await expect(bar.getByRole('button', { name: '다시 하기' })).toBeVisible();
   await expect(bar.getByRole('button', { name: '더 보기' })).toHaveCount(0);
 });
+
+test('더 보기 상자의 Esc 는 상자만 닫고 바깥(다이얼로그 등)으로 넘기지 않는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.evaluate(() => {
+    (window as unknown as { escSeen: number }).escSeen = 0;
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') (window as unknown as { escSeen: number }).escSeen += 1;
+    }, { capture: true });
+  });
+  const more = page.getByRole('button', { name: '더 보기' });
+  await more.click();
+  const panel = page.locator('.aikive-toolbar__more');
+  await expect(panel).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+  expect(await page.evaluate(() => (window as unknown as { escSeen: number }).escSeen)).toBe(0);
+  await expect(more).toBeFocused();
+});
