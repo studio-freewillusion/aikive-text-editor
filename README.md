@@ -78,12 +78,15 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `initialContent` | HTML 또는 옛 tiptap JSON 문서 |
 | `editable` | 기본 `true` |
 | `features` | 툴바 기능 켜기/끄기(아래) |
+| `colors` | 글자색 팔레트의 미리 정한 색 `{ label, value }[]`. 없으면 기본 9색. 「기본」·「직접 고르기」 는 항상 있음 |
 | `toolbar` | `'fixed'`(기본) 또는 `'bubble'`(글자를 고르면 뜸). 터치 기기는 항상 고정 툴바 |
 | `htmlClassNames` | `{ youtube }` — 저장 HTML 의 유튜브 iframe 에 붙일 class |
 | `onChange(html)` | 내용이 바뀔 때. 빈 에디터면 `''` |
 | `onUploadImage(file)` | 이미지를 올리고 주소를 돌려줌. 없으면 이미지 넣기를 숨김 |
 | `onNotice(message, kind)` | 안내 문구(`'info'`·`'error'`). 없으면 콘솔 경고 |
 | `onSourceModeChange(on)` | HTML 모드가 실제로 바뀔 때. HTML 적용에 실패하면 부르지 않음. `resetContent`·`restoreSnapshot` 이 끌 때도 부르지 않음. 바깥 토글은 `setSourceMode` 를 부르고, 토글 상태는 이 콜백으로만 바꿀 것 |
+| `placeholder` | 빈 본문 안내 문구. 저장 HTML 에는 들어가지 않음 |
+| `onUploadingChange(uploading)` | 이미지를 올리는 중 상태가 바뀔 때만. 올리는 중에는 HTML 모드로 들어가지 않음 |
 
 **features** — 기본값은 모두 `true`. 끈 기능은 버튼만 숨기고, 이미 들어 있는 내용은 보존합니다.
 
@@ -96,7 +99,10 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `align` | 정렬 |
 | `table` | 표 넣기·편집 |
 | `image` | 이미지 넣기(`onUploadImage` 가 있을 때) |
-| `link` | 링크 |
+| `link` | 링크(Ctrl/⌘+K) |
+| `list` | 글머리 목록·번호 목록 |
+| `blocks` | 「블록」 선택 — 인용·구분선·코드 블록 |
+| `youtube` | 유튜브 넣기 |
 | `sourceMode` | HTML 모드 |
 | `undoRedo` | 되돌리기·다시 하기 |
 
@@ -111,6 +117,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `takeSnapshot()` / `restoreSnapshot(s)` | 편집 상태(되돌리기 기록 포함) 저장·되살리기 — 탭마다 다른 내용을 한 에디터로 편집할 때 |
 | `setSourceMode(on)` | HTML 모드 켜고 끄기 |
 | `isEmpty()` | 비었는지 |
+| `isUploading()` | 이미지를 올리는 중인지 — 저장 전에 확인 |
 | `insertFiles(files)` | 파일 넣기(이미지만, 10MB 이하) |
 | `focus()` | 포커스 |
 
@@ -124,6 +131,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `--aikive-text-fg` | `#e4e6e7` |
 | `--aikive-text-link` | `#46add4` |
 | `--aikive-text-scrollbar` | `rgba(255, 255, 255, 0.42)` |
+| `--aikive-text-error` | `#f96960` |
 | `--aikive-toolbar-bg` | `#28282b` |
 | `--aikive-toolbar-fg` | `#ebebeb` |
 | `--aikive-toolbar-border` | `#525259` |
