@@ -345,4 +345,32 @@ describe('문단 종류 바꾸기 경계', () => {
     expect(editor.getHTML()).toMatch(/^<ul><li><p>n1<\/p><ul><li><p>n2<\/p><\/li><\/ul><\/li><\/ul>/);
     expect(screen.getByLabelText('문단 종류')).toHaveValue('bullet');
   });
+
+  const selectBetween = (a: string, b: string) => {
+    let from = -1;
+    let to = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (!node.isText) return;
+      if (from < 0 && node.text?.includes(a)) from = pos + 1;
+      if (node.text?.includes(b)) to = pos + 1;
+    });
+    editor.commands.setTextSelection({ from, to });
+  };
+
+  it('목록 사이에 낀 코드 블록까지 골라 목록 종류를 바꿔도 줄바꿈이 남는다', async () => {
+    createEditor('<ul><li><p>b1</p></li><li><p>b2</p></li></ul><pre><code>line1\nline2</code></pre><ul><li><p>c1</p></li></ul>');
+    selectBetween('b2', 'c1');
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'ordered');
+    expect(editor.getHTML()).toContain('line1<br>line2');
+  });
+
+  it('바깥 항목부터 종류가 다른 하위 목록까지 골라 목록을 바꿔도 오류 없이 바뀐다', async () => {
+    const original = '<ul><li><p>n1</p><ol><li><p>n2</p></li></ol></li></ul>';
+    createEditor(original);
+    selectBetween('n1', 'n2');
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'ordered');
+    expect(editor.getHTML()).not.toBe(original);
+  });
 });

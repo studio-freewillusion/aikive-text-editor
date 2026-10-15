@@ -168,17 +168,17 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
   const blockTypes = BLOCK_TYPES.filter((t) => t.feature === null || features[t.feature]);
   const setBlockType = (value: BlockType) => {
     const isList = (t: BlockType) => t === 'bullet' || t === 'ordered';
-    // 목록끼리는 그 자리에서 종류만 바꿔야 목록이 쪼개지거나 하위 목록 들여쓰기가 풀리지 않는다
-    if (isList(value) && isList(state.blockType)) {
+    const { selection, doc } = editor.state;
+    let hasCode = selection.$from.parent.type.name === 'codeBlock';
+    doc.nodesBetween(selection.from, selection.to, (node) => {
+      if (node.type.name === 'codeBlock') hasCode = true;
+    });
+    // 양 끝이 목록이면 그 자리에서 종류만 바꿔야 목록이 쪼개지거나 하위 목록 들여쓰기가 풀리지 않는다(코드 블록이 끼면 아래 경로로 줄바꿈을 지킨다)
+    if (!hasCode && isList(value) && isList(innermostBlockType(selection.$from)) && isList(innermostBlockType(selection.$to))) {
       (value === 'bullet' ? chain().toggleBulletList() : chain().toggleOrderedList()).run();
       return;
     }
     // 코드 블록은 먼저 문단으로 바꿔야 줄바꿈이 <br> 로 남는다(clearNodes 만 거치면 줄바꿈 글자가 사라짐)
-    const { from, to } = editor.state.selection;
-    let hasCode = editor.state.selection.$from.parent.type.name === 'codeBlock';
-    editor.state.doc.nodesBetween(from, to, (node) => {
-      if (node.type.name === 'codeBlock') hasCode = true;
-    });
     const c = hasCode ? chain().setParagraph().clearNodes() : chain().clearNodes();
     if (value === 'h1' || value === 'h2' || value === 'h3') c.setHeading({ level: Number(value[1]) as 1 | 2 | 3 });
     else if (value === 'bullet') c.toggleBulletList();
