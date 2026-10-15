@@ -25,5 +25,10 @@ describe('styles.css', () => {
     // 입력 창은 본문 영역 overflow 에 잘리지 않게 fixed, 오류색은 변수로 바꿀 수 있다
     expect(css).toMatch(/\.aikive-popover\s*\{[^}]*position: fixed/);
     expect(css).toContain('--aikive-text-error: #f96960');
+    // 인용은 어두운 기본 테마에서 읽히는 색이고 변수로 바꿀 수 있다
+    expect(css).toMatch(/\.tiptap blockquote\s*\{[^}]*background: var\(--aikive-quote-bg\)/);
+    expect(css).toContain('--aikive-quote-bg: #28282b');
+    // 팔레트는 밀어서 넘기는 툴바 밖, 감싸는 상자 기준으로 띄운다
+    expect(css).toMatch(/\.aikive-toolbar-wrap\s*\{[^}]*position: relative/);
   }, 180_000);
 });
