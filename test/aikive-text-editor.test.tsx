@@ -3,7 +3,7 @@ import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/react';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { AikiveTextEditor, type AikiveTextEditorHandle } from '../src/editor';
+import { AikiveTextEditor, type AikiveTextEditorHandle, type AikiveTextEditorProps } from '../src/editor';
 
 const editorOf = async (container: HTMLElement) => {
   let ed: Editor | undefined;
@@ -232,5 +232,34 @@ describe('AikiveTextEditor', () => {
     expect(off.current!.getHTML()).toBe(on.current!.getHTML());
     expect(off.current!.getHTML()).toContain('<blockquote>');
     expect(off.current!.getHTML()).toContain('data-youtube-video');
+  });
+});
+
+describe('placeholder', () => {
+  const mount = async (props: Partial<AikiveTextEditorProps>) => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    const { container } = render(<AikiveTextEditor ref={ref} {...props} />);
+    await waitFor(() => expect(container.querySelector('.ProseMirror')).toBeTruthy());
+    return { ref, container };
+  };
+
+  it('빈 본문에 안내 문구를 보이고 HTML 에는 넣지 않는다', async () => {
+    const { ref, container } = await mount({ placeholder: '내용을 입력하세요' });
+    expect(container.querySelector('.ProseMirror p[data-placeholder="내용을 입력하세요"]')).toBeTruthy();
+    expect(ref.current!.getHTML()).toBe('');
+  });
+
+  it('prop 이 없거나 읽기 전용이면 안내 문구가 없다', async () => {
+    const a = await mount({});
+    expect(a.container.querySelector('[data-placeholder]')).toBeNull();
+    a.container.remove();
+    const b = await mount({ placeholder: '내용을 입력하세요', editable: false });
+    expect(b.container.querySelector('[data-placeholder]')).toBeNull();
+  });
+
+  it('HTML 모드 입력칸에도 같은 안내 문구', async () => {
+    const { ref, container } = await mount({ placeholder: '내용을 입력하세요' });
+    act(() => ref.current!.setSourceMode(true));
+    expect(container.querySelector('textarea')).toHaveAttribute('placeholder', '내용을 입력하세요');
   });
 });

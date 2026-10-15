@@ -50,6 +50,7 @@ export interface AikiveTextEditorProps {
   editable?: boolean;
   features?: Features;
   colors?: ColorOption[];
+  placeholder?: string;
   toolbar?: 'fixed' | 'bubble';
   htmlClassNames?: HtmlClassNames;
   onChange?: (html: string) => void;

@@ -28,6 +28,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     editable = true,
     features: featuresProp,
     colors,
+    placeholder,
     toolbar = 'fixed',
     htmlClassNames,
     onChange,
@@ -87,7 +88,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   const editor = useEditor({
     immediatelyRender: false,
     editable,
-    extensions: buildExtensions(editable, htmlClassNames, fileDeps),
+    extensions: buildExtensions(editable, htmlClassNames, fileDeps, placeholder),
     content: parseContent(initialContent),
     editorProps: {
       attributes: { class: 'tiptap' },
@@ -273,6 +274,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         <textarea
           className="aikive-text-editor__source"
           aria-label="HTML 소스"
+          placeholder={placeholder}
           value={sourceText}
           onChange={(e) => {
             updateSourceText(e.target.value);

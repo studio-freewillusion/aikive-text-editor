@@ -4,6 +4,7 @@ import FileHandler from '@tiptap/extension-file-handler';
 import { TableKit } from '@tiptap/extension-table';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontFamily, FontSize, LineHeight, TextStyle } from '@tiptap/extension-text-style';
+import { Placeholder } from '@tiptap/extensions';
 import StarterKit from '@tiptap/starter-kit';
 import { ClampColumnWidth, CustomImage, CustomLink, InputPopoverBridge, StoredYoutube, UploadPlaceholder, VideoBlock } from '../extensions';
 import { isAllowedEditorUri } from '../sanitize';
@@ -14,6 +15,7 @@ export function buildExtensions(
   editable: boolean,
   classNames: HtmlClassNames = {},
   fileDeps: () => FileDeps = () => ({ notice: () => {} }),
+  placeholder?: string,
 ): AnyExtension[] {
   return [
     StarterKit.configure({ link: false, trailingNode: editable ? undefined : false }),
@@ -55,5 +57,6 @@ export function buildExtensions(
     }),
     InputPopoverBridge,
     UploadPlaceholder,
+    ...(editable && placeholder ? [Placeholder.configure({ placeholder })] : []),
   ];
 }
