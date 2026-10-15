@@ -1,6 +1,7 @@
 import { useEditorState, type Editor } from '@tiptap/react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Features, NoticeKind } from '../editor/types';
+import type { ColorOption, Features } from '../editor/types';
+import type { PopoverKind } from '../extensions/input-popover-bridge';
 import {
   AlignCenter,
   AlignJustify,
@@ -14,12 +15,15 @@ import {
   ImageIcon,
   Italic,
   Link,
+  List,
+  ListOrdered,
   Palette,
   Redo2,
   Strikethrough,
   Table2,
   Underline,
   Undo2,
+  Youtube,
 } from './icons';
 
 export interface ToolbarProps {
@@ -28,8 +32,10 @@ export interface ToolbarProps {
   sourceMode: boolean;
   onToggleSource: () => void;
   onPickImage?: () => void;
-  onNotice: (message: string, kind: NoticeKind) => void;
+  onOpenPopover: (kind: PopoverKind) => void;
   scrollable?: boolean;
+  colors?: ColorOption[];
+  uploading?: boolean;
 }
 
 const FONT_SIZE_OPTIONS = ['10px', '11px', '12px', '14px', '16px', '18px', '21px', '24px', '36px', '48px', '60px', '72px'];
@@ -51,6 +57,12 @@ const COLOR_OPTIONS = [
   { label: '남색', value: '#4338ca' },
   { label: '보라', value: '#7c3aed' },
 ];
+
+const BLOCK_ACTIONS = [
+  { value: 'toggleBlockquote', label: '인용' },
+  { value: 'setHorizontalRule', label: '구분선' },
+  { value: 'toggleCodeBlock', label: '코드 블록' },
+] as const;
 
 // 표 안에 커서가 있을 때만 뜨는 편집 목록 — 말풍선 메뉴가 좁아 select 하나로 묶었다
 const TABLE_ACTIONS = [
@@ -97,7 +109,7 @@ function ToolButton({
   );
 }
 
-export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onNotice, scrollable }: ToolbarProps) {
+export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors, uploading }: ToolbarProps) {
   const [colorOpen, setColorOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const [fade, setFade] = useState({ start: false, end: false });
@@ -136,36 +148,12 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       isJustify: ed.isActive({ textAlign: 'justify' }),
       isLink: ed.isActive('link') || (ed.isActive('image') && !!ed.getAttributes('image').href),
       isTable: ed.isActive('table'),
+      isBulletList: ed.isActive('bulletList'),
+      isOrderedList: ed.isActive('orderedList'),
       fontSize: (ed.getAttributes('textStyle').fontSize as string | undefined) ?? '',
       lineHeight: (ed.getAttributes('textStyle').lineHeight as string | undefined) ?? '',
     }),
   });
-
-  const setLink = useCallback(() => {
-    // 이미지는 링크 서식이 안 붙어 이미지 속성으로 건다
-    const isImage = editor.isActive('image');
-    const previousUrl = isImage ? editor.getAttributes('image').href : editor.getAttributes('link').href;
-    const url = window.prompt('URL', previousUrl);
-    if (url === null) return;
-    if (url === '') {
-      if (isImage) editor.chain().focus().unsetImageLink().run();
-      else editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-    const openInNewTab = window.confirm('새 탭에서 열까요? (확인 = 새 탭, 취소 = 같은 탭)');
-    const target = openInNewTab ? '_blank' : null;
-    const applied = isImage
-      ? editor.chain().focus().setImageLink({ href: url, target }).run()
-      : editor
-          .chain()
-          .focus()
-          .extendMarkRange('link')
-          // 같은 탭은 _self·기본 rel 로 남긴다 — 비워 두면 다시 불러올 때 기본값(새 탭·rel)이 붙어 HTML 이 달라진다
-          .setLink({ href: url, target: target ?? '_self', rel: openInNewTab ? 'noopener noreferrer' : 'noopener noreferrer nofollow' })
-          .run();
-    // 주소가 검사에 걸리면 명령은 false 만 돌려준다 — 입력 직후에만 알린다
-    if (!applied) onNotice('유효하지 않은 URL 입니다. http:// 또는 https:// 주소만 넣을 수 있습니다.', 'error');
-  }, [editor, onNotice]);
 
   const chain = () => editor.chain().focus();
 
@@ -216,7 +204,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
             >
               기본
             </button>
-            {COLOR_OPTIONS.map((c) => (
+            {(colors ?? COLOR_OPTIONS).map((c) => (
               <button
                 key={c.value}
                 type="button"
@@ -283,6 +271,44 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
           ))}
         </select>
       )}
+      {features.list && (
+        <>
+          <ToolButton
+            label="글머리 목록"
+            active={state.isBulletList}
+            pressed={state.isBulletList}
+            onClick={() => chain().toggleBulletList().run()}
+          >
+            <List />
+          </ToolButton>
+          <ToolButton
+            label="번호 목록"
+            active={state.isOrderedList}
+            pressed={state.isOrderedList}
+            onClick={() => chain().toggleOrderedList().run()}
+          >
+            <ListOrdered />
+          </ToolButton>
+        </>
+      )}
+      {features.blocks && (
+        <select
+          aria-label="블록"
+          className="aikive-toolbar__select"
+          value=""
+          onChange={(e) => {
+            const action = e.target.value as (typeof BLOCK_ACTIONS)[number]['value'] | '';
+            if (action) chain()[action]().run();
+          }}
+        >
+          <option value="">블록</option>
+          {BLOCK_ACTIONS.map((a) => (
+            <option key={a.value} value={a.value}>
+              {a.label}
+            </option>
+          ))}
+        </select>
+      )}
       {features.table &&
         (state.isTable ? (
           <select
@@ -312,12 +338,17 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
         </ToolButton>
       )}
       {features.link && (
-        <ToolButton label="링크 연결" active={state.isLink} onClick={setLink}>
+        <ToolButton label="링크 연결" active={state.isLink} onClick={() => onOpenPopover('link')}>
           <Link />
         </ToolButton>
       )}
+      {features.youtube && (
+        <ToolButton label="유튜브 넣기" onClick={() => onOpenPopover('youtube')}>
+          <Youtube />
+        </ToolButton>
+      )}
       {features.sourceMode && (
-        <ToolButton label="HTML 모드" pressed={sourceMode} onClick={onToggleSource}>
+        <ToolButton label="HTML 모드" pressed={sourceMode} disabled={uploading && !sourceMode} onClick={onToggleSource}>
           <Code2 />
         </ToolButton>
       )}

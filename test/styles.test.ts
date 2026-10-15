@@ -22,5 +22,8 @@ describe('styles.css', () => {
     // 터치 기기 고정 툴바는 밀어서 넘기므로 가로 막대를 숨긴다
     expect(css).toMatch(/\.aikive-toolbar\.is-scrollable\s*\{[^}]*scrollbar-width: none/);
     expect(css).toMatch(/\.aikive-toolbar\.is-scrollable::-webkit-scrollbar\s*\{[^}]*display: none/);
+    // 입력 창은 본문 영역 overflow 에 잘리지 않게 fixed, 오류색은 변수로 바꿀 수 있다
+    expect(css).toMatch(/\.aikive-popover\s*\{[^}]*position: fixed/);
+    expect(css).toContain('--aikive-text-error: #f96960');
   }, 180_000);
 });

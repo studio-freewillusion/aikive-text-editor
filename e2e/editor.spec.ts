@@ -94,3 +94,79 @@ test('최신 이모지는 지원하는 브라우저에서 글자로 저장된다
   await expect(html(page)).toContainText('🫧');
   await expect(html(page)).not.toContainText('<img');
 });
+
+test('Ctrl/⌘+K 로 링크 창을 열어 Enter 로 링크를 건다', async ({ page }) => {
+  await open(page, '<p>안녕</p>');
+  await page.locator('.ProseMirror').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.press('ControlOrMeta+k');
+  const input = page.getByRole('dialog', { name: '링크' }).getByLabel('주소');
+  await expect(input).toBeFocused();
+  await input.fill('example.com');
+  await input.press('Enter');
+  await expect(html(page)).toContainText('href="https://example.com"');
+  await expect(page.getByRole('dialog', { name: '링크' })).toHaveCount(0);
+});
+
+test('화면 아래쪽 글자에서 열면 링크 창이 위로 열린다', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 400 });
+  await open(page, '<p>1</p>'.repeat(40) + '<p>끝</p>');
+  const last = page.locator('.ProseMirror p').last();
+  await last.scrollIntoViewIfNeeded();
+  await last.evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().bottom - window.innerHeight + 10));
+  await last.click();
+  await page.keyboard.press('ControlOrMeta+k');
+  const dialog = page.getByRole('dialog', { name: '링크' });
+  const box = (await dialog.boundingBox())!;
+  const lastBox = (await last.boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(lastBox.y);
+});
+
+test('터치로 이미지 손잡이를 끌면 폭이 바뀐다', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, baseURL: 'http://localhost:5199' });
+  const page = await context.newPage();
+  await open(page, '<p>a</p><img src="http://localhost:5199/sample.png">');
+  await page.locator('.ProseMirror img').first().tap();
+  const handle = page.locator('[data-image-control="resize"]').last();
+  await expect(handle).toBeVisible();
+  const hb = (await handle.boundingBox())!;
+  const x = hb.x + hb.width / 2;
+  const y = hb.y + hb.height / 2;
+  await handle.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true, clientX: x, clientY: y });
+  for (const dx of [20, 40, 60, 80, 100]) {
+    await page.evaluate(
+      ([cx, cy]) =>
+        document.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'touch', clientX: cx, clientY: cy, bubbles: true })),
+      [x - dx, y],
+    );
+  }
+  await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true })));
+  await expect(html(page)).toContainText(/width: \d+px/);
+  await context.close();
+});
+
+for (const toolbar of ['fixed', 'bubble']) {
+  test(`이미지 조작 바의 대체 텍스트로 alt 를 넣는다(${toolbar})`, async ({ page }) => {
+    await page.goto(`/?toolbar=${toolbar}&content=` + encodeURIComponent('<p>a</p><img src="http://localhost:5199/sample.png">'));
+    await page.locator('.ProseMirror img').first().click();
+    await page.locator('[data-image-control][aria-label="대체 텍스트"]').click();
+    const input = page.getByRole('dialog', { name: '대체 텍스트' }).getByRole('textbox');
+    await expect(input).toBeFocused();
+    await input.fill('장면');
+    await input.press('Enter');
+    await expect(html(page)).toContainText('alt="장면"');
+  });
+}
+
+test('크기 조절 손잡이를 끌지 않고 누르기만 하면 폭이 그대로다', async ({ page }) => {
+  await open(page, '<p>a</p><img src="http://localhost:5199/sample.png">');
+  await page.locator('.ProseMirror img').first().click();
+  const handle = page.locator('[data-image-control="resize"]').last();
+  await expect(handle).toBeVisible();
+  const hb = (await handle.boundingBox())!;
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(html(page)).toContainText('width: 100%');
+  await expect(html(page)).not.toContainText('width: 100px');
+});
