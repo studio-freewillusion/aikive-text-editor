@@ -1,4 +1,5 @@
 import { Editor } from '@tiptap/core';
+import { TextSelection } from '@tiptap/pm/state';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   ALT_MAX_LENGTH,
@@ -113,6 +114,18 @@ describe('insertYoutube', () => {
     create('<p>a</p>').commands.setTextSelection(2);
     expect(insertYoutube(editor, 'youtu.be/dQw4w9WgXcQ')).toBeNull();
     expect(editor.getHTML()).toContain('data-youtube-video');
+  });
+
+  it.each([
+    ['글 중간', '<p>abc</p><p>def</p>', 4, '<p>Zdef</p>'],
+    ['글 끝', '<p>abc</p>', 4, '<p>Z</p>'],
+  ])('%s에 넣고 바로 이어 써도 영상이 남고 다음 글자 자리에 들어간다', (_, content, pos, typed) => {
+    create(content).commands.setTextSelection(pos);
+    insertYoutube(editor, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    expect(editor.state.selection).toBeInstanceOf(TextSelection);
+    editor.commands.insertContent('Z');
+    expect(editor.getHTML()).toContain('data-youtube-video');
+    expect(editor.getHTML()).toContain(typed);
   });
 
   it.each(['https://example.com/v', '', 'javascript:alert(1)'])('「%s」 는 거부한다', (input) => {

@@ -1,4 +1,5 @@
 import type { Editor } from '@tiptap/core';
+import { NodeSelection, Selection } from '@tiptap/pm/state';
 import { normalizeImageHref } from '../sanitize';
 
 export const LINK_EMPTY_MESSAGE = '주소를 입력해 주세요.';
@@ -52,7 +53,14 @@ export function insertYoutube(editor: Editor, input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return YOUTUBE_INVALID_MESSAGE;
   const src = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) || trimmed.startsWith('//') ? trimmed : `https://${trimmed}`;
-  return editor.chain().focus().setYoutubeVideo({ src }).run() ? null : YOUTUBE_INVALID_MESSAGE;
+  if (!editor.chain().focus().setYoutubeVideo({ src }).run()) return YOUTUBE_INVALID_MESSAGE;
+  // 넣은 뒤 영상 노드가 선택된 채면 다음 입력이 영상을 지운다 — 영상 뒤 글자 자리로 옮긴다
+  const { selection, doc } = editor.state;
+  if (selection instanceof NodeSelection) {
+    const next = Selection.findFrom(doc.resolve(selection.to), 1, true);
+    if (next) editor.view.dispatch(editor.state.tr.setSelection(next));
+  }
+  return null;
 }
 
 export function applyAlt(editor: Editor, input: string): void {
