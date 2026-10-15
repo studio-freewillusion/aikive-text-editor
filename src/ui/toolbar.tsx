@@ -207,7 +207,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     features.image && onPickImage && { value: 'image', label: '이미지' },
   ].filter((o): o is { value: string; label: string } => !!o);
   const insert = (value: string) => {
-    // 말풍선 툴바는 글자를 골라야 떠서 그대로 넣으면 고른 글자를 덮어쓴다 — 선택 끝에 넣는다
+    // 고른 채 넣으면 고른 글자를 덮어쓴다(말풍선 툴바는 늘 고른 상태) — 선택 끝에 넣는다
     if (!editor.state.selection.empty) editor.commands.setTextSelection(editor.state.selection.to);
     if (value === 'table') chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (value === 'hr') chain().setHorizontalRule().run();
