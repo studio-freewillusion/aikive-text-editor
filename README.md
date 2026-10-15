@@ -134,6 +134,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `--aikive-text-error` | `#f96960` |
 | `--aikive-quote-bg` | `#28282b` |
 | `--aikive-quote-border` | `#525259` |
+| `--aikive-text-font` | `Pretendard, "Pretendard Variable", …, sans-serif` (글꼴 파일은 쓰는 쪽에서 불러옵니다) |
 | `--aikive-toolbar-bg` | `#28282b` |
 | `--aikive-toolbar-fg` | `#ebebeb` |
 | `--aikive-toolbar-border` | `#525259` |

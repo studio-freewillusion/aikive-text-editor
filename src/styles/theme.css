@@ -1,6 +1,7 @@
 /* 기본 어두운 테마 — 쓰는 쪽이 변수를 덮어 바꾼다 */
 :root {
   --aikive-text-bg: #18181a;
+  --aikive-text-font: Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   --aikive-text-fg: #e4e6e7;
   --aikive-text-link: #46add4;
   --aikive-text-scrollbar: rgba(255, 255, 255, 0.42);

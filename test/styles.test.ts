@@ -30,5 +30,8 @@ describe('styles.css', () => {
     expect(css).toContain('--aikive-quote-bg: #28282b');
     // 팔레트는 밀어서 넘기는 툴바 밖, 감싸는 상자 기준으로 띄운다
     expect(css).toMatch(/\.aikive-toolbar-wrap\s*\{[^}]*position: relative/);
+    // 본문 글꼴은 Pretendard 가 기본이고 변수로 바꿀 수 있다(글꼴 파일은 쓰는 쪽이 불러온다)
+    expect(css).toMatch(/\.tiptap\s*\{[^}]*font-family: var\(--aikive-text-font/);
+    expect(css).toMatch(/--aikive-text-font:\s*Pretendard,/);
   }, 180_000);
 });

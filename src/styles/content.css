@@ -2,6 +2,7 @@
 @charset "UTF-8";
 .tiptap {
   color: var(--aikive-text-fg, #e4e6e7);
+  font-family: var(--aikive-text-font, sans-serif);
   /* layout */
 }
 .tiptap:first-child {
