@@ -1,6 +1,6 @@
-import { EditorState, NodeSelection } from '@tiptap/pm/state';
+import { AllSelection, EditorState, NodeSelection, Selection } from '@tiptap/pm/state';
 import DragHandle from '@tiptap/extension-drag-handle-react';
-import { EditorContent, useEditor, type Editor } from '@tiptap/react';
+import { EditorContent, posToDOMRect, useEditor, type Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { GripVertical } from '../ui/icons';
@@ -164,6 +164,17 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     }
   }, [editor]);
 
+  // 전체 선택은 tiptap 이 문서 처음·끝(블록 경계)으로 재서 글자 위치와 상관없이 가운데에 뜬다 — 첫·끝 글자 자리로 잰다
+  const bubbleReference = useCallback(() => {
+    if (!editor || !(editor.state.selection instanceof AllSelection)) return null;
+    const { doc } = editor.state;
+    const first = Selection.findFrom(doc.resolve(0), 1, true);
+    const last = Selection.findFrom(doc.resolve(doc.content.size), -1, true);
+    if (!first || !last) return null;
+    const rect = posToDOMRect(editor.view, first.from, last.to);
+    return { getBoundingClientRect: () => rect, getClientRects: () => [rect] };
+  }, [editor]);
+
   const closePopover = useCallback(
     (refocus: boolean) => {
       setPopover(null);
@@ -263,7 +274,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     <div ref={setRootEl} className={['aikive-text-editor', className].filter(Boolean).join(' ')}>
       {editable && !useBubble && <div className="aikive-text-editor__toolbar">{toolbarNode}</div>}
       {editable && editor && useBubble && (
-        <BubbleMenu editor={editor} options={{ placement: 'top', offset: 8, shift: bubbleShift }} updateDelay={0} shouldShow={shouldShowBubbleMenu}>
+        <BubbleMenu editor={editor} options={{ placement: 'top', offset: 8, shift: bubbleShift }} updateDelay={0} shouldShow={shouldShowBubbleMenu} getReferencedVirtualElement={bubbleReference}>
           {toolbarNode}
         </BubbleMenu>
       )}

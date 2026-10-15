@@ -197,3 +197,19 @@ test('말풍선 툴바는 에디터 좌우 밖으로 나가지 않는다', async
     expect(box.x + box.width).toBeLessThanOrEqual(editorBox.x + editorBox.width + 1);
   }
 });
+
+test('전체 선택한 말풍선 툴바는 글자 위치를 따른다(왼쪽 글이면 왼쪽, 오른쪽 글이면 오른쪽)', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  for (const [align, side] of [['left', 'left'], ['right', 'right']] as const) {
+    await page.goto('/?toolbar=bubble&content=' + encodeURIComponent(`<p style="text-align: ${align}">짧은 줄</p><p style="text-align: ${align}">둘째 줄</p>`));
+    const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+    await page.locator('.ProseMirror p').last().click();
+    await page.keyboard.press('ControlOrMeta+a');
+    const bar = page.getByRole('toolbar', { name: '서식' });
+    await expect(bar).toBeVisible();
+    await page.waitForTimeout(200);
+    const box = (await bar.boundingBox())!;
+    if (side === 'left') expect(box.x).toBeLessThanOrEqual(editorBox.x + 1);
+    else expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
+  }
+});
