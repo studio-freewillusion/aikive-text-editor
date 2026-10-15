@@ -21,6 +21,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     initialContent,
     editable = true,
     features: featuresProp,
+    colors,
     toolbar = 'fixed',
     htmlClassNames,
     onChange,
@@ -208,6 +209,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       onToggleSource={() => setSourceMode(!sourceMode)}
       onPickImage={onUploadImage ? () => fileInputRef.current?.click() : undefined}
       onOpenPopover={(kind) => openInputPopover(editor, kind)}
+      colors={colors}
       scrollable={coarsePointer}
     />
   ) : null;

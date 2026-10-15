@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { applyLink, currentLink, removeLink } from '../editor/popover-actions';
+import { applyLink, currentLink, insertYoutube, removeLink } from '../editor/popover-actions';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
 
 export interface PopoverAnchor {
@@ -78,6 +78,7 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
   // 처음 그릴 때 숨겨 두면 autoFocus 가 실패한다 — 위치는 그리기 전에 layout effect 가 잡으므로 숨기지 않는다
   let body: ReactNode = null;
   if (kind === 'link') body = <LinkForm editor={editor} onDone={done} />;
+  if (kind === 'youtube') body = <YoutubeForm editor={editor} onDone={done} />;
 
   return (
     <div
@@ -182,6 +183,35 @@ function LinkForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
         )}
         <button type="button" className="is-primary" onClick={apply}>
           적용
+        </button>
+      </div>
+    </>
+  );
+}
+
+function YoutubeForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
+  const [url, setUrl] = useState('');
+  const [error, setError] = useState('');
+  const apply = () => {
+    const message = insertYoutube(editor, url);
+    if (message) setError(message);
+    else onDone();
+  };
+  return (
+    <>
+      <PopoverField
+        label="유튜브 주소"
+        value={url}
+        error={error}
+        onChange={(value) => {
+          setUrl(value);
+          setError('');
+        }}
+        onEnter={apply}
+      />
+      <div className="aikive-popover__actions">
+        <button type="button" className="is-primary" onClick={apply}>
+          넣기
         </button>
       </div>
     </>

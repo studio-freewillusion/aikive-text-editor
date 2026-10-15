@@ -214,4 +214,23 @@ describe('AikiveTextEditor', () => {
     act(() => ref.current!.setSourceMode(false));
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('list·youtube·blocks 를 꺼도 기존 목록·인용·구분선·코드 블록·유튜브는 그대로 저장한다', async () => {
+    const content =
+      '<ul><li><p>a</p></li></ul><ol><li><p>b</p></li></ol><blockquote><p>c</p></blockquote><hr><pre><code>d</code></pre>' +
+      '<div data-youtube-video=""><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"></iframe></div>';
+    const on = createRef<AikiveTextEditorHandle>();
+    const off = createRef<AikiveTextEditorHandle>();
+    render(
+      <>
+        <AikiveTextEditor ref={on} initialContent={content} />
+        <AikiveTextEditor ref={off} initialContent={content} features={{ list: false, youtube: false, blocks: false }} />
+      </>,
+    );
+    await waitFor(() => expect(off.current!.getHTML()).not.toBe(''));
+    await waitFor(() => expect(on.current!.getHTML()).not.toBe(''));
+    expect(off.current!.getHTML()).toBe(on.current!.getHTML());
+    expect(off.current!.getHTML()).toContain('<blockquote>');
+    expect(off.current!.getHTML()).toContain('data-youtube-video');
+  });
 });

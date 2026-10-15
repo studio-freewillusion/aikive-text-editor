@@ -12,10 +12,13 @@ export {
   Image as ImageIcon,
   Italic,
   Link,
+  List,
+  ListOrdered,
   Palette,
   Redo2,
   Strikethrough,
   Table2,
   Underline,
   Undo2,
+  Youtube,
 } from 'lucide-react';

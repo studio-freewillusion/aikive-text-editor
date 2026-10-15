@@ -1,6 +1,6 @@
 import { useEditorState, type Editor } from '@tiptap/react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Features } from '../editor/types';
+import type { ColorOption, Features } from '../editor/types';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
 import {
   AlignCenter,
@@ -15,12 +15,15 @@ import {
   ImageIcon,
   Italic,
   Link,
+  List,
+  ListOrdered,
   Palette,
   Redo2,
   Strikethrough,
   Table2,
   Underline,
   Undo2,
+  Youtube,
 } from './icons';
 
 export interface ToolbarProps {
@@ -31,6 +34,7 @@ export interface ToolbarProps {
   onPickImage?: () => void;
   onOpenPopover: (kind: PopoverKind) => void;
   scrollable?: boolean;
+  colors?: ColorOption[];
 }
 
 const FONT_SIZE_OPTIONS = ['10px', '11px', '12px', '14px', '16px', '18px', '21px', '24px', '36px', '48px', '60px', '72px'];
@@ -52,6 +56,12 @@ const COLOR_OPTIONS = [
   { label: '남색', value: '#4338ca' },
   { label: '보라', value: '#7c3aed' },
 ];
+
+const BLOCK_ACTIONS = [
+  { value: 'toggleBlockquote', label: '인용' },
+  { value: 'setHorizontalRule', label: '구분선' },
+  { value: 'toggleCodeBlock', label: '코드 블록' },
+] as const;
 
 // 표 안에 커서가 있을 때만 뜨는 편집 목록 — 말풍선 메뉴가 좁아 select 하나로 묶었다
 const TABLE_ACTIONS = [
@@ -98,7 +108,7 @@ function ToolButton({
   );
 }
 
-export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable }: ToolbarProps) {
+export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors }: ToolbarProps) {
   const [colorOpen, setColorOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const [fade, setFade] = useState({ start: false, end: false });
@@ -137,6 +147,8 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       isJustify: ed.isActive({ textAlign: 'justify' }),
       isLink: ed.isActive('link') || (ed.isActive('image') && !!ed.getAttributes('image').href),
       isTable: ed.isActive('table'),
+      isBulletList: ed.isActive('bulletList'),
+      isOrderedList: ed.isActive('orderedList'),
       fontSize: (ed.getAttributes('textStyle').fontSize as string | undefined) ?? '',
       lineHeight: (ed.getAttributes('textStyle').lineHeight as string | undefined) ?? '',
     }),
@@ -191,7 +203,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
             >
               기본
             </button>
-            {COLOR_OPTIONS.map((c) => (
+            {(colors ?? COLOR_OPTIONS).map((c) => (
               <button
                 key={c.value}
                 type="button"
@@ -258,6 +270,44 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
           ))}
         </select>
       )}
+      {features.list && (
+        <>
+          <ToolButton
+            label="글머리 목록"
+            active={state.isBulletList}
+            pressed={state.isBulletList}
+            onClick={() => chain().toggleBulletList().run()}
+          >
+            <List />
+          </ToolButton>
+          <ToolButton
+            label="번호 목록"
+            active={state.isOrderedList}
+            pressed={state.isOrderedList}
+            onClick={() => chain().toggleOrderedList().run()}
+          >
+            <ListOrdered />
+          </ToolButton>
+        </>
+      )}
+      {features.blocks && (
+        <select
+          aria-label="블록"
+          className="aikive-toolbar__select"
+          value=""
+          onChange={(e) => {
+            const action = e.target.value as (typeof BLOCK_ACTIONS)[number]['value'] | '';
+            if (action) chain()[action]().run();
+          }}
+        >
+          <option value="">블록</option>
+          {BLOCK_ACTIONS.map((a) => (
+            <option key={a.value} value={a.value}>
+              {a.label}
+            </option>
+          ))}
+        </select>
+      )}
       {features.table &&
         (state.isTable ? (
           <select
@@ -289,6 +339,11 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       {features.link && (
         <ToolButton label="링크 연결" active={state.isLink} onClick={() => onOpenPopover('link')}>
           <Link />
+        </ToolButton>
+      )}
+      {features.youtube && (
+        <ToolButton label="유튜브 넣기" onClick={() => onOpenPopover('youtube')}>
+          <Youtube />
         </ToolButton>
       )}
       {features.sourceMode && (

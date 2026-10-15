@@ -174,3 +174,27 @@ describe('링크 창', () => {
     expect(screen.queryByRole('dialog', { name: '링크' })).toBeNull();
   });
 });
+
+describe('유튜브 창', () => {
+  it('주소를 넣고 Enter 로 유튜브를 넣는다', async () => {
+    const { ref, ed, user } = await setup();
+    act(() => {
+      ed.commands.setTextSelection(3);
+    });
+    await user.click(screen.getByRole('button', { name: '유튜브 넣기' }));
+    await user.type(screen.getByLabelText('유튜브 주소'), 'https://www.youtube.com/watch?v=dQw4w9WgXcQ{Enter}');
+    expect(screen.queryByRole('dialog', { name: '유튜브' })).toBeNull();
+    expect(ref.current!.getHTML()).toContain('data-youtube-video');
+  });
+
+  it('유튜브가 아닌 주소는 창 안에 알린다', async () => {
+    const { ed, user } = await setup();
+    act(() => {
+      ed.commands.setTextSelection(3);
+    });
+    await user.click(screen.getByRole('button', { name: '유튜브 넣기' }));
+    await user.type(screen.getByLabelText('유튜브 주소'), 'https://example.com/v');
+    await user.click(screen.getByRole('button', { name: '넣기' }));
+    expect(screen.getByText('유튜브 주소를 확인해 주세요.')).toBeInTheDocument();
+  });
+});

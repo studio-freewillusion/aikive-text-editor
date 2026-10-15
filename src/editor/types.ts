@@ -12,6 +12,9 @@ export interface Features {
   link?: boolean;
   sourceMode?: boolean;
   undoRedo?: boolean;
+  list?: boolean;
+  youtube?: boolean;
+  blocks?: boolean;
 }
 
 export const DEFAULT_FEATURES: Required<Features> = {
@@ -25,7 +28,15 @@ export const DEFAULT_FEATURES: Required<Features> = {
   link: true,
   sourceMode: true,
   undoRedo: true,
+  list: true,
+  youtube: true,
+  blocks: true,
 };
+
+export interface ColorOption {
+  label: string;
+  value: string;
+}
 
 // 기존 저장 HTML 의 class 를 그대로 내기 위해 쓰는 쪽이 넘긴다
 export interface HtmlClassNames {
@@ -38,6 +49,7 @@ export interface AikiveTextEditorProps {
   initialContent?: string;
   editable?: boolean;
   features?: Features;
+  colors?: ColorOption[];
   toolbar?: 'fixed' | 'bubble';
   htmlClassNames?: HtmlClassNames;
   onChange?: (html: string) => void;

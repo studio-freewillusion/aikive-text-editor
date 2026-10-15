@@ -4,6 +4,7 @@ export { DEFAULT_FEATURES } from './types';
 export type {
   AikiveTextEditorHandle,
   AikiveTextEditorProps,
+  ColorOption,
   Features,
   HtmlClassNames,
   NoticeKind,

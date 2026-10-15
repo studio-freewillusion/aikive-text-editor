@@ -2,7 +2,7 @@ import { Editor } from '@tiptap/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_FEATURES, type Features } from '../src/editor';
+import { DEFAULT_FEATURES, type ColorOption, type Features } from '../src/editor';
 import { buildExtensions } from '../src/editor/use-editor-setup';
 import { Toolbar } from '../src/ui/toolbar';
 
@@ -14,7 +14,9 @@ function createEditor(content: string) {
   return editor;
 }
 
-function renderToolbar(opts: { features?: Required<Features>; onPickImage?: () => void; onOpenPopover?: (kind: string) => void } = {}) {
+function renderToolbar(
+  opts: { features?: Required<Features>; onPickImage?: () => void; onOpenPopover?: (kind: string) => void; colors?: ColorOption[] } = {},
+) {
   return render(
     <Toolbar
       editor={editor}
@@ -23,6 +25,7 @@ function renderToolbar(opts: { features?: Required<Features>; onPickImage?: () =
       onToggleSource={() => {}}
       onPickImage={opts.onPickImage}
       onOpenPopover={opts.onOpenPopover ?? (() => {})}
+      colors={opts.colors}
     />,
   );
 }
@@ -90,6 +93,9 @@ describe('Toolbar', () => {
     ['link', '링크 연결'],
     ['sourceMode', 'HTML 모드'],
     ['undoRedo', '되돌리기'],
+    ['list', '글머리 목록'],
+    ['blocks', '블록'],
+    ['youtube', '유튜브 넣기'],
   ] as const)('features.%s 를 끄면 「%s」 가 사라지고 켜면 보인다', (key, label) => {
     createEditor('<p>a</p>');
     const { unmount } = renderToolbar({ features: { ...DEFAULT_FEATURES, [key]: false } });
@@ -167,5 +173,49 @@ describe('Toolbar', () => {
     editor.commands.setNodeSelection(0);
     renderToolbar();
     expect(screen.getByRole('button', { name: '링크 연결' })).toHaveClass('is-active');
+  });
+
+  it('목록 버튼으로 글머리·번호 목록을 넣는다', async () => {
+    createEditor('<p>안녕</p>');
+    editor.commands.setTextSelection(2);
+    renderToolbar();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '글머리 목록' }));
+    expect(editor.getHTML()).toContain('<ul>');
+    expect(screen.getByRole('button', { name: '글머리 목록' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: '번호 목록' }));
+    expect(editor.getHTML()).toContain('<ol>');
+  });
+
+  it.each([
+    ['toggleBlockquote', '<blockquote>'],
+    ['setHorizontalRule', '<hr>'],
+    ['toggleCodeBlock', '<pre>'],
+  ])('블록 select 에서 %s 를 고르면 %s 를 넣고 select 는 「블록」 으로 돌아간다', async (action, tag) => {
+    createEditor('<p>안녕</p>');
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('블록'), action);
+    expect(editor.getHTML()).toContain(tag);
+    expect(screen.getByLabelText('블록')).toHaveValue('');
+  });
+
+  it('유튜브 넣기를 누르면 유튜브 창을 연다', async () => {
+    createEditor('<p>안녕</p>');
+    const onOpenPopover = vi.fn();
+    renderToolbar({ onOpenPopover });
+    await userEvent.setup().click(screen.getByRole('button', { name: '유튜브 넣기' }));
+    expect(onOpenPopover).toHaveBeenCalledWith('youtube');
+  });
+
+  it('colors 를 넘기면 그 색들로 팔레트를 만든다', async () => {
+    createEditor('<p>안녕</p>');
+    renderToolbar({ colors: [{ label: '하양', value: '#ffffff' }] });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '글자색' }));
+    expect(screen.queryByRole('button', { name: '글자색 빨강' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: '글자색 하양' }));
+    expect(editor.getHTML()).toMatch(/color: (#ffffff|rgb\(255, 255, 255\))/);
+    expect(screen.getByRole('button', { name: '글자색 기본' })).toBeInTheDocument();
+    expect(screen.getByLabelText('글자색 직접 고르기')).toBeInTheDocument();
   });
 });
