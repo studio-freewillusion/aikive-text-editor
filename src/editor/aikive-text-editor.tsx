@@ -1,11 +1,13 @@
-import { EditorState } from '@tiptap/pm/state';
+import { EditorState, NodeSelection } from '@tiptap/pm/state';
 import DragHandle from '@tiptap/extension-drag-handle-react';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { GripVertical } from '../ui/icons';
 import { shouldShowBubbleMenu } from '../ui/should-show-bubble-menu';
 import { Toolbar } from '../ui/toolbar';
+import { InputPopover, type PopoverAnchor } from '../ui/input-popover';
+import { openInputPopover, type InputPopoverBridgeStorage, type PopoverKind } from '../extensions';
 import { parseContent } from './parse-content';
 import { attachFiles, IMAGE_MIME_TYPES, type FileDeps } from './attach-files';
 import { applySourceContent, SOURCE_HTML_ERROR_MESSAGE } from './source-mode';
@@ -55,6 +57,9 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   const [coarsePointer, setCoarsePointer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const features = { ...DEFAULT_FEATURES, ...featuresProp };
+  const [popover, setPopover] = useState<PopoverKind | null>(null);
+  const linkEnabledRef = useRef(features.link);
+  linkEnabledRef.current = features.link;
 
   // 서버 렌더링에서는 알 수 없어 마운트 뒤에 읽는다 — 터치 기기는 말풍선 대신 고정 툴바
   useEffect(() => {
@@ -85,6 +90,52 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   useEffect(() => {
     if (editor && editor.isEditable !== editable) editor.setEditable(editable);
   }, [editor, editable]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const bridge = (editor.storage as unknown as { inputPopoverBridge: InputPopoverBridgeStorage }).inputPopoverBridge;
+    bridge.open = (kind, pos) => {
+      if (!editor.isEditable || sourceModeRef.current) return false;
+      // 이미지 조작 바는 pos 를 넘긴다 — 단축키·툴바만 link 기능 설정을 따른다
+      if (kind === 'link' && pos === undefined && !linkEnabledRef.current) return false;
+      if (pos !== undefined) editor.commands.setNodeSelection(pos);
+      setPopover(kind);
+      return true;
+    };
+    return () => {
+      bridge.open = null;
+    };
+  }, [editor]);
+
+  const anchorOf = useCallback((): PopoverAnchor => {
+    if (!editor) return { left: 0, top: 0, bottom: 0 };
+    const { view } = editor;
+    const { selection } = editor.state;
+    if (selection instanceof NodeSelection) {
+      const dom = view.nodeDOM(selection.from);
+      if (dom instanceof HTMLElement) {
+        const r = dom.getBoundingClientRect();
+        return { left: r.left, top: r.top, bottom: r.bottom };
+      }
+    }
+    try {
+      const start = view.coordsAtPos(selection.from);
+      const end = view.coordsAtPos(selection.to);
+      return { left: start.left, top: start.top, bottom: end.bottom };
+    } catch {
+      // 화면에 그려지지 않아 좌표를 못 읽으면(테스트 환경 등) 본문 위쪽에 둔다
+      const r = view.dom.getBoundingClientRect();
+      return { left: r.left, top: r.top, bottom: r.top };
+    }
+  }, [editor]);
+
+  const closePopover = useCallback(
+    (refocus: boolean) => {
+      setPopover(null);
+      if (refocus) editor?.commands.focus();
+    },
+    [editor],
+  );
 
   const setSourceMode = (on: boolean) => {
     if (!editor || on === sourceModeRef.current) return;
@@ -156,7 +207,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       sourceMode={sourceMode}
       onToggleSource={() => setSourceMode(!sourceMode)}
       onPickImage={onUploadImage ? () => fileInputRef.current?.click() : undefined}
-      onNotice={notice}
+      onOpenPopover={(kind) => openInputPopover(editor, kind)}
       scrollable={coarsePointer}
     />
   ) : null;
@@ -200,6 +251,9 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
             onChangeRef.current?.(e.target.value);
           }}
         />
+      )}
+      {editable && editor && popover && (
+        <InputPopover editor={editor} kind={popover} anchor={anchorOf} onClose={closePopover} />
       )}
       <div hidden={sourceMode}>
         <EditorContent editor={editor} className={contentClassName} />

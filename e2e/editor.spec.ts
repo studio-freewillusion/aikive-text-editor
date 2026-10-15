@@ -94,3 +94,30 @@ test('최신 이모지는 지원하는 브라우저에서 글자로 저장된다
   await expect(html(page)).toContainText('🫧');
   await expect(html(page)).not.toContainText('<img');
 });
+
+test('Ctrl/⌘+K 로 링크 창을 열어 Enter 로 링크를 건다', async ({ page }) => {
+  await open(page, '<p>안녕</p>');
+  await page.locator('.ProseMirror').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.press('ControlOrMeta+k');
+  const input = page.getByRole('dialog', { name: '링크' }).getByLabel('주소');
+  await expect(input).toBeFocused();
+  await input.fill('example.com');
+  await input.press('Enter');
+  await expect(html(page)).toContainText('href="https://example.com"');
+  await expect(page.getByRole('dialog', { name: '링크' })).toHaveCount(0);
+});
+
+test('화면 아래쪽 글자에서 열면 링크 창이 위로 열린다', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 400 });
+  await open(page, '<p>1</p>'.repeat(40) + '<p>끝</p>');
+  const last = page.locator('.ProseMirror p').last();
+  await last.scrollIntoViewIfNeeded();
+  await last.evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().bottom - window.innerHeight + 10));
+  await last.click();
+  await page.keyboard.press('ControlOrMeta+k');
+  const dialog = page.getByRole('dialog', { name: '링크' });
+  const box = (await dialog.boundingBox())!;
+  const lastBox = (await last.boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(lastBox.y);
+});

@@ -5,3 +5,4 @@ export { CustomLink } from './custom-link';
 export { migrateImageAttrs } from './migrate-image-attrs';
 export { normalizeSourceHTML } from './normalize-source-html';
 export { StoredYoutube } from './stored-youtube';
+export { InputPopoverBridge, openInputPopover, type InputPopoverBridgeStorage, type PopoverKind } from './input-popover-bridge';

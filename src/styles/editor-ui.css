@@ -194,3 +194,83 @@
     transition: none;
   }
 }
+
+.aikive-popover {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(20rem, calc(100vw - 16px));
+  padding: 0.75rem;
+  border: 1px solid var(--aikive-toolbar-border);
+  border-radius: 0.5rem;
+  background-color: var(--aikive-toolbar-bg);
+  color: var(--aikive-toolbar-fg);
+  font-size: 0.8125rem;
+}
+
+.aikive-popover__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.aikive-popover__field input {
+  height: 2rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--aikive-toolbar-border);
+  border-radius: 0.375rem;
+  background-color: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+}
+
+.aikive-popover__field input[aria-invalid='true'] {
+  border-color: var(--aikive-text-error);
+}
+
+.aikive-popover__error {
+  margin: 0;
+  color: var(--aikive-text-error);
+}
+
+.aikive-popover__check {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.aikive-popover__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.aikive-popover__actions button {
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--aikive-toolbar-border);
+  border-radius: 0.375rem;
+  background-color: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.aikive-popover__actions button.is-primary {
+  border-color: var(--aikive-toolbar-active);
+  background-color: var(--aikive-toolbar-active);
+  color: #fff;
+}
+
+.aikive-popover input:focus-visible,
+.aikive-popover button:focus-visible {
+  outline: 2px solid var(--aikive-toolbar-fg);
+  outline-offset: 2px;
+}
+
+@media (any-hover: hover) and (any-pointer: fine) {
+  .aikive-popover__actions button:not(.is-primary):hover {
+    background-color: var(--aikive-toolbar-hover);
+  }
+}

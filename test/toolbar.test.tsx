@@ -14,7 +14,7 @@ function createEditor(content: string) {
   return editor;
 }
 
-function renderToolbar(opts: { features?: Required<Features>; onPickImage?: () => void; onNotice?: () => void } = {}) {
+function renderToolbar(opts: { features?: Required<Features>; onPickImage?: () => void; onOpenPopover?: (kind: string) => void } = {}) {
   return render(
     <Toolbar
       editor={editor}
@@ -22,7 +22,7 @@ function renderToolbar(opts: { features?: Required<Features>; onPickImage?: () =
       sourceMode={false}
       onToggleSource={() => {}}
       onPickImage={opts.onPickImage}
-      onNotice={opts.onNotice ?? (() => {})}
+      onOpenPopover={opts.onOpenPopover ?? (() => {})}
     />,
   );
 }
@@ -63,25 +63,7 @@ describe('Toolbar', () => {
     expect(editor.getHTML()).toMatch(/color: (#dc2626|rgb\(220, 38, 38\))/);
   });
 
-  it('같은 탭으로 열도록 고르면 target 을 넣지 않는다', async () => {
-    createEditor('<p>안녕</p>');
-    renderToolbar();
-    vi.spyOn(window, 'prompt').mockReturnValue('https://example.com');
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
-    expect(editor.getHTML()).toContain('href="https://example.com"');
-    expect(editor.getHTML()).not.toContain('target="_blank"');
-  });
 
-  it('넣을 수 없는 주소면 onNotice 로 안내한다', async () => {
-    createEditor('<p>안녕</p>');
-    const onNotice = vi.fn();
-    renderToolbar({ onNotice });
-    vi.spyOn(window, 'prompt').mockReturnValue('mailto:a@b.com');
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
-    expect(onNotice).toHaveBeenCalledWith(expect.stringContaining('http'), 'error');
-  });
 
   it('표 삽입 버튼으로 표를 넣는다', async () => {
     createEditor('<p>안녕</p>');
@@ -134,49 +116,9 @@ describe('Toolbar', () => {
     renderToolbar();
     expect(screen.queryByLabelText('글꼴')).toBeNull();
   });
-  it('이미지를 고르고 링크 연결을 누르면 이미지에 링크를 걸고 버튼이 활성으로 보인다', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValueOnce('example.com');
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
-    createEditor('<img src="https://cdn.example.com/a.png">');
-    editor.commands.setNodeSelection(0);
-    renderToolbar();
-    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
-    expect(editor.getHTML()).toContain('<a href="https://example.com" target="_blank"');
-    expect(await screen.findByRole('button', { name: '링크 연결' })).toHaveClass('is-active');
-  });
 
-  it('이미지 링크를 같은 탭으로 다시 걸면 target 과 rel 이 남지 않는다', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValueOnce('https://example.com');
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
-    createEditor('<a href="https://example.com" target="_blank"><img src="https://cdn.example.com/a.png"></a>');
-    editor.commands.setNodeSelection(0);
-    renderToolbar();
-    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
-    expect(editor.getHTML()).toContain('<a href="https://example.com"');
-    expect(editor.getHTML()).not.toMatch(/target=|rel=/);
-  });
 
-  it('이미지 링크 주소를 비우면 링크만 풀고 이미지는 남긴다', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValueOnce('');
-    createEditor('<a href="https://example.com"><img src="https://cdn.example.com/a.png"></a>');
-    editor.commands.setNodeSelection(0);
-    renderToolbar();
-    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
-    expect(editor.getHTML()).not.toContain('<a');
-    expect(editor.getHTML()).toContain('<img');
-  });
 
-  it('이미지에 http·https 가 아닌 주소를 넣으면 onNotice 로 안내한다', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValueOnce('javascript:alert(1)');
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
-    createEditor('<img src="https://cdn.example.com/a.png">');
-    editor.commands.setNodeSelection(0);
-    const onNotice = vi.fn();
-    renderToolbar({ onNotice });
-    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
-    expect(onNotice).toHaveBeenCalledWith(expect.stringContaining('유효하지 않은 URL'), 'error');
-    expect(editor.getHTML()).not.toContain('<a');
-  });
   it('밀어서 넘기는 툴바는 더 넘길 쪽 끝을 흐리게 표시한다', () => {
     createEditor('<p>a</p>');
     render(
@@ -185,7 +127,7 @@ describe('Toolbar', () => {
         features={DEFAULT_FEATURES}
         sourceMode={false}
         onToggleSource={() => {}}
-        onNotice={() => {}}
+        onOpenPopover={() => {}}
         scrollable
       />,
     );
@@ -205,22 +147,25 @@ describe('Toolbar', () => {
     expect(bar).toHaveClass('is-fade-start');
     expect(bar).not.toHaveClass('is-fade-end');
   });
-  it('같은 탭으로 고른 글자 링크는 저장했다 다시 불러와도 같은 탭이다', async () => {
-    createEditor('<p>안녕</p>');
-    renderToolbar();
-    vi.spyOn(window, 'prompt').mockReturnValue('https://example.com');
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
-    const saved = editor.getHTML();
-    editor.destroy();
-    createEditor(saved);
-    expect(editor.getHTML()).not.toContain('target="_blank"');
-    expect(editor.getHTML()).toBe(saved);
-  });
 
   it('글자와 링크 걸린 이미지를 함께 고르면 링크 버튼을 활성으로 보이지 않는다', () => {
     createEditor('<p>글</p><a href="https://example.com"><img src="https://cdn.example.com/a.png"></a>');
     renderToolbar();
     expect(screen.getByRole('button', { name: '링크 연결' })).not.toHaveClass('is-active');
+  });
+
+  it('링크 연결을 누르면 링크 창을 연다', async () => {
+    createEditor('<p>안녕</p>');
+    const onOpenPopover = vi.fn();
+    renderToolbar({ onOpenPopover });
+    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
+    expect(onOpenPopover).toHaveBeenCalledWith('link');
+  });
+
+  it('링크가 걸린 이미지를 고르면 링크 연결 버튼이 활성으로 보인다', () => {
+    createEditor('<a href="https://example.com"><img src="https://cdn.example.com/a.png"></a>');
+    editor.commands.setNodeSelection(0);
+    renderToolbar();
+    expect(screen.getByRole('button', { name: '링크 연결' })).toHaveClass('is-active');
   });
 });
