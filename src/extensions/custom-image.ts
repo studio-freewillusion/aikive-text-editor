@@ -653,13 +653,10 @@ class CustomImageNodeView implements NodeView {
                             : this.resizeLimits.maxWidth === undefined
                               ? parentContentWidth
                               : Math.min(this.resizeLimits.maxWidth, parentContentWidth);
-                    // pointer 좌표는 소수라 그대로 쓰면 저장 폭이 1126.5px 처럼 된다 — 마우스 이벤트 시절처럼 정수로 맞춘다
-                    const nextWidth = Math.round(
-                        clampWidth(this.startWidth + deltaX, {
-                            ...this.resizeLimits,
-                            maxWidth,
-                        }),
-                    );
+                    const nextWidth = clampWidth(this.startWidth + deltaX, {
+                        ...this.resizeLimits,
+                        maxWidth,
+                    });
 
                     this.elements.container.style.width = `${nextWidth}px`;
 
@@ -683,6 +680,13 @@ class CustomImageNodeView implements NodeView {
 
                     if (this.isDestroyed) {
                         return;
+                    }
+
+                    // 끄는 동안은 소수 좌표 그대로 부드럽게 두고, 저장할 폭만 정수로 맞춘다
+                    const width = Number.parseFloat(this.elements.container.style.width);
+
+                    if (Number.isFinite(width)) {
+                        this.elements.container.style.width = `${Math.round(width)}px`;
                     }
 
                     this.dispatchNodeView();
