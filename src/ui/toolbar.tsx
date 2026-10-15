@@ -178,14 +178,19 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       (value === 'bullet' ? chain().toggleBulletList() : chain().toggleOrderedList()).run();
       return;
     }
-    // 코드 블록은 먼저 문단으로 바꿔야 줄바꿈이 <br> 로 남는다(clearNodes 만 거치면 줄바꿈 글자가 사라짐)
-    const c = hasCode ? chain().setParagraph().clearNodes() : chain().clearNodes();
-    if (value === 'h1' || value === 'h2' || value === 'h3') c.setHeading({ level: Number(value[1]) as 1 | 2 | 3 });
-    else if (value === 'bullet') c.toggleBulletList();
-    else if (value === 'ordered') c.toggleOrderedList();
-    else if (value === 'quote') c.setBlockquote();
-    else if (value === 'code') c.setCodeBlock();
-    c.run();
+    // 깊은 중첩 목록 등 바꿀 수 없는 구조면 ProseMirror 가 적용 전에 RangeError 를 던진다 — 본문은 그대로라 조용히 둔다
+    try {
+      // 코드 블록은 먼저 문단으로 바꿔야 줄바꿈이 <br> 로 남는다(clearNodes 만 거치면 줄바꿈 글자가 사라짐)
+      const c = hasCode ? chain().setParagraph().clearNodes() : chain().clearNodes();
+      if (value === 'h1' || value === 'h2' || value === 'h3') c.setHeading({ level: Number(value[1]) as 1 | 2 | 3 });
+      else if (value === 'bullet') c.toggleBulletList();
+      else if (value === 'ordered') c.toggleOrderedList();
+      else if (value === 'quote') c.setBlockquote();
+      else if (value === 'code') c.setCodeBlock();
+      c.run();
+    } catch (e) {
+      if (!(e instanceof RangeError)) throw e;
+    }
   };
   const insertOptions = [
     features.table && !state.isTable && { value: 'table', label: '표' },

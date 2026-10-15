@@ -373,4 +373,22 @@ describe('문단 종류 바꾸기 경계', () => {
     await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'ordered');
     expect(editor.getHTML()).not.toBe(original);
   });
+
+  it.each(['h1', 'code'])('3단 목록 가운데 항목을 %s 로 바꿀 수 없으면 오류 없이 그대로 둔다', async (value) => {
+    const original = '<ul><li><p>a1</p><ol><li><p>a2</p><ul><li><p>a3</p></li></ul></li></ol></li></ul>';
+    createEditor(original);
+    cursorAt('a2');
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), value);
+    expect(editor.getHTML()).toMatch(/^<ul><li><p>a1<\/p><ol><li><p>a2<\/p><ul><li><p>a3<\/p><\/li><\/ul><\/li><\/ol><\/li><\/ul>/);
+  });
+
+  it('첫 블록이 중첩 목록인 문서 전체를 목록으로 바꿀 수 없으면 오류 없이 그대로 둔다', async () => {
+    createEditor('<ul><li><p>a1</p><ul><li><p>a2</p></li></ul></li><li><p>a4</p></li></ul><p>pz</p>');
+    const before = editor.getHTML();
+    editor.commands.selectAll();
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'ordered');
+    expect(editor.getHTML()).toBe(before);
+  });
 });
