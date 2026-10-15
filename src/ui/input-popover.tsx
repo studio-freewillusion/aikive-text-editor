@@ -157,6 +157,12 @@ export function PopoverField({
 }) {
   const id = useId();
   const errorId = `${id}-error`;
+  // 바깥 form 제출을 막고, 한글 조합을 끝내는 Enter 는 적용으로 치지 않는다
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (!e.nativeEvent.isComposing) onEnter();
+  };
   return (
     <div className="aikive-popover__field">
       <label htmlFor={id}>{label}</label>
@@ -169,12 +175,7 @@ export function PopoverField({
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
         onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          // 바깥 form 제출을 막고, 한글 조합을 끝내는 Enter 는 적용으로 치지 않는다
-          if (e.key !== 'Enter') return;
-          e.preventDefault();
-          if (!e.nativeEvent.isComposing) onEnter();
-        }}
+        onKeyDown={onKeyDown}
       />
       {error && (
         <p id={errorId} className="aikive-popover__error" role="alert">
