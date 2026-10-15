@@ -160,8 +160,8 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
           .chain()
           .focus()
           .extendMarkRange('link')
-          // 같은 탭은 _self 로 남긴다 — target 이 없으면 다시 불러올 때 링크 기본값(새 탭)이 붙는다
-          .setLink({ href: url, target: target ?? '_self', rel: openInNewTab ? 'noopener noreferrer' : null })
+          // 같은 탭은 _self·기본 rel 로 남긴다 — 비워 두면 다시 불러올 때 기본값(새 탭·rel)이 붙어 HTML 이 달라진다
+          .setLink({ href: url, target: target ?? '_self', rel: openInNewTab ? 'noopener noreferrer' : 'noopener noreferrer nofollow' })
           .run();
     // 주소가 검사에 걸리면 명령은 false 만 돌려준다 — 입력 직후에만 알린다
     if (!applied) onNotice('유효하지 않은 URL 입니다. http:// 또는 https:// 주소만 넣을 수 있습니다.', 'error');

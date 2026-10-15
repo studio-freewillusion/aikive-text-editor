@@ -112,4 +112,16 @@ describe('파일 넣기', () => {
     expect(html).toContain('public/a.png');
     expect(html).toContain('public/b.png');
   });
+  it('올리는 동안 에디터가 사라져도 오류 없이 끝난다', async () => {
+    let resolve!: (url: string) => void;
+    const upload = vi.fn(() => new Promise<string>((r) => (resolve = r)));
+    const { ref, ed } = await setup(upload);
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([png('a.png')]);
+    });
+    ed.destroy();
+    resolve('https://cdn.example.com/public/a.png');
+    await expect(done).resolves.toBeUndefined();
+  });
 });

@@ -215,6 +215,7 @@ describe('Toolbar', () => {
     editor.destroy();
     createEditor(saved);
     expect(editor.getHTML()).not.toContain('target="_blank"');
+    expect(editor.getHTML()).toBe(saved);
   });
 
   it('글자와 링크 걸린 이미지를 함께 고르면 링크 버튼을 활성으로 보이지 않는다', () => {
