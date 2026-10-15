@@ -1,4 +1,5 @@
-import { AllSelection, EditorState, NodeSelection, Selection } from '@tiptap/pm/state';
+import { EditorState, NodeSelection } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import DragHandle from '@tiptap/extension-drag-handle-react';
 import { EditorContent, posToDOMRect, useEditor, type Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
@@ -164,14 +165,21 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     }
   }, [editor]);
 
-  // 전체 선택은 tiptap 이 문서 처음·끝(블록 경계)으로 재서 글자 위치와 상관없이 가운데에 뜬다 — 첫·끝 글자 자리로 잰다
+  // tiptap 은 선택 처음·끝 자리로 재서, 끝이 블록 경계(전체 선택·문서 끝 빈 문단·끌어 옮긴 블록)면 글자와 상관없이 가운데에 뜬다 — 선택 안 첫·끝 글자로 잰다
   const bubbleReference = useCallback(() => {
-    if (!editor || !(editor.state.selection instanceof AllSelection)) return null;
-    const { doc } = editor.state;
-    const first = Selection.findFrom(doc.resolve(0), 1, true);
-    const last = Selection.findFrom(doc.resolve(doc.content.size), -1, true);
-    if (!first || !last) return null;
-    const rect = posToDOMRect(editor.view, first.from, last.to);
+    if (!editor) return null;
+    const { doc, selection } = editor.state;
+    if (selection instanceof NodeSelection || selection instanceof CellSelection) return null;
+    let from = -1;
+    let to = -1;
+    doc.nodesBetween(selection.from, selection.to, (node, pos) => {
+      if (!node.isText) return true;
+      if (from < 0) from = Math.max(pos, selection.from);
+      to = Math.min(pos + node.nodeSize, selection.to);
+      return false;
+    });
+    if (from < 0) return null;
+    const rect = posToDOMRect(editor.view, from, to);
     return { getBoundingClientRect: () => rect, getClientRects: () => [rect] };
   }, [editor]);
 

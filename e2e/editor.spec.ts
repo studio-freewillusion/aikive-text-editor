@@ -213,3 +213,36 @@ test('전체 선택한 말풍선 툴바는 글자 위치를 따른다(왼쪽 글
     else expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
   }
 });
+
+test('끝이 인용·목록이거나 빈 줄까지 고른 선택도 말풍선 툴바가 글자 쪽에 붙는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  for (const content of [
+    '<blockquote><p style="text-align: right">인용 오른쪽</p></blockquote>',
+    '<ul><li><p style="text-align: right">항목1</p></li><li><p style="text-align: right">항목2</p></li></ul>',
+  ]) {
+    await page.goto('/?toolbar=bubble&content=' + encodeURIComponent(content));
+    const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+    await page.locator('.ProseMirror p').first().click();
+    await page.keyboard.press('ControlOrMeta+a');
+    const bar = page.getByRole('toolbar', { name: '서식' });
+    await expect(bar).toBeVisible();
+    await page.waitForTimeout(200);
+    const box = (await bar.boundingBox())!;
+    expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
+  }
+  await page.goto('/?toolbar=bubble&content=' + encodeURIComponent('<p style="text-align: right">오른쪽 글</p><p></p>'));
+  const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+  await page.locator('.ProseMirror').evaluate((el) => {
+    const range = document.createRange();
+    range.setStart(el.querySelector('p')!.firstChild!, 0);
+    range.setEnd(el.querySelectorAll('p')[1], 0);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+  });
+  await page.locator('.ProseMirror').focus();
+  const bar = page.getByRole('toolbar', { name: '서식' });
+  await expect(bar).toBeVisible();
+  await page.waitForTimeout(200);
+  const box = (await bar.boundingBox())!;
+  expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
+});
