@@ -166,6 +166,13 @@ describe('적용 뒤 이어 쓰기', () => {
     expect(editor.getHTML()).toMatch(/<a [^>]*>hello<\/a>Q world/);
   });
 
+  it('전체 선택 뒤 링크를 걸고 이어 쳐도 링크에 붙지 않는다', () => {
+    create('<p>hello</p><p>world</p>').commands.selectAll();
+    applyLink(editor, 'example.com', true);
+    editor.commands.insertContent('X');
+    expect(editor.getHTML()).toMatch(/world<\/a>X<\/p>$/);
+  });
+
   it('주소를 글자로 넣은 뒤 이어 쳐도 링크에 붙지 않는다', () => {
     create('<p>안녕</p>').commands.setTextSelection(3);
     applyLink(editor, 'example.com', true);

@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/core';
-import { NodeSelection, TextSelection } from '@tiptap/pm/state';
+import { NodeSelection, Selection } from '@tiptap/pm/state';
 import { normalizeImageHref } from '../sanitize';
 import { placeCaretAfterBlock } from './caret-after';
 
@@ -46,7 +46,8 @@ export function applyLink(editor: Editor, input: string, newTab: boolean): strin
   }
   // 링크 끝으로 커서를 옮기고 다음 입력엔 링크를 빼야 이어 쓴 글자가 링크를 지우거나 링크에 붙지 않는다
   const { tr } = editor.state;
-  tr.setSelection(TextSelection.create(tr.doc, editor.state.selection.to)).removeStoredMark(editor.schema.marks.link);
+  // 전체·여러 칸 선택의 끝은 블록 경계라 가장 가까운 글자 자리로 맞춘다
+  tr.setSelection(Selection.near(tr.doc.resolve(editor.state.selection.to), -1)).removeStoredMark(editor.schema.marks.link);
   editor.view.dispatch(tr);
   return null;
 }
