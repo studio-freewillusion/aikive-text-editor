@@ -365,3 +365,61 @@ describe('입력 창 마무리', () => {
     expect(screen.queryByRole('dialog', { name: '링크' })).toBeNull();
   });
 });
+
+describe('입력 창이 열린 채 바뀌는 상황', () => {
+  it.each(['restoreSnapshot', 'resetContent', 'setSourceMode'] as const)('%s 로 본문이 바뀌면 창을 닫아 다른 본문에 적용하지 않는다', async (how) => {
+    const { ref, ed, user } = await setup({ initialContent: '<p>Tab B text here</p>' });
+    const snapshotB = ref.current!.takeSnapshot()!;
+    act(() => ref.current!.resetContent('<p>Tab A text</p>'));
+    act(() => {
+      ed.commands.setTextSelection({ from: 1, to: 4 });
+    });
+    await user.click(screen.getByRole('button', { name: '링크 연결' }));
+    expect(screen.getByRole('dialog', { name: '링크' })).toBeInTheDocument();
+    act(() => {
+      if (how === 'restoreSnapshot') ref.current!.restoreSnapshot(snapshotB);
+      else if (how === 'resetContent') ref.current!.resetContent('<p>Tab B text here</p>');
+      else ref.current!.setSourceMode(true);
+    });
+    expect(screen.queryByRole('dialog', { name: '링크' })).toBeNull();
+  });
+
+  it('업로드가 끝난 뒤 Esc 로 닫아도 열 때의 선택으로 돌아간다', async () => {
+    let resolve!: (url: string) => void;
+    const upload = () => new Promise<string>((r) => (resolve = r));
+    const { ref, ed, user } = await setup({ initialContent: '<p>안녕 세상</p>', onUploadImage: upload });
+    act(() => {
+      ed.commands.setTextSelection(6);
+    });
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([new File([new Uint8Array(10)], 'a.png', { type: 'image/png' })]);
+    });
+    act(() => {
+      ed.commands.setTextSelection({ from: 1, to: 3 });
+    });
+    await user.click(screen.getByRole('button', { name: '링크 연결' }));
+    await act(async () => {
+      resolve('https://cdn.example.com/public/a.png');
+      await done;
+    });
+    fireEvent.keyDown(screen.getByLabelText('주소'), { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: '링크' })).toBeNull();
+    expect([ed.state.selection.from, ed.state.selection.to]).toEqual([1, 3]);
+  });
+
+  it('키보드로 창 밖으로 포커스가 나가면 닫고, 갈 곳 없는 blur(Safari 버튼 클릭)에는 닫지 않는다', async () => {
+    const { ed, user } = await setup();
+    act(() => {
+      ed.commands.selectAll();
+    });
+    await user.click(screen.getByRole('button', { name: '링크 연결' }));
+    const input = screen.getByLabelText('주소');
+    fireEvent.blur(input, { relatedTarget: null });
+    expect(screen.getByRole('dialog', { name: '링크' })).toBeInTheDocument();
+    fireEvent.blur(input, { relatedTarget: screen.getByLabelText('새 탭에서 열기') });
+    expect(screen.getByRole('dialog', { name: '링크' })).toBeInTheDocument();
+    fireEvent.blur(input, { relatedTarget: ed.view.dom });
+    expect(screen.queryByRole('dialog', { name: '링크' })).toBeNull();
+  });
+});

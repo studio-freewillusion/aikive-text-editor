@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core';
 import type { Transaction } from '@tiptap/pm/state';
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { ALT_MAX_LENGTH, applyAlt, applyLink, currentLink, insertYoutube, removeLink } from '../editor/popover-actions';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
 
@@ -76,23 +76,6 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
     return () => document.removeEventListener('pointerdown', onPointerDown, true);
   }, [onClose]);
 
-  // 바깥 다이얼로그(Radix 등)는 document 캡처로 Esc 를 받아 창보다 먼저 닫힌다 — window 캡처에서 먼저 끊는다
-  useEffect(() => {
-    const onEscape = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== 'Escape' || !ref.current?.contains(e.target as Node)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      onClose(true);
-    };
-    window.addEventListener('keydown', onEscape, true);
-    return () => window.removeEventListener('keydown', onEscape, true);
-  }, [onClose]);
-
-  // 체크박스 등에서 누른 Enter 도 바깥 form 을 제출하지 않게 한다
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) e.preventDefault();
-  };
-
   // 열려 있는 동안 업로드 등이 선택을 옮겨도 적용은 열 때 고른 곳에 한다
   const bookmark = useRef(editor.state.selection.getBookmark());
   useEffect(() => {
@@ -112,6 +95,30 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
     }
   };
 
+  // 바깥 다이얼로그(Radix 등)는 document 캡처로 Esc 를 받아 창보다 먼저 닫힌다 — window 캡처에서 먼저 끊는다
+  useEffect(() => {
+    const onEscape = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape' || !ref.current?.contains(e.target as Node)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      restoreSelection();
+      onClose(true);
+    };
+    window.addEventListener('keydown', onEscape, true);
+    return () => window.removeEventListener('keydown', onEscape, true);
+  }, [onClose]);
+
+  // 체크박스 등에서 누른 Enter 도 바깥 form 을 제출하지 않게 한다
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) e.preventDefault();
+  };
+
+  // 키보드로 창 밖에 포커스가 가면 닫는다. 갈 곳이 없는 blur(Safari 는 버튼을 눌러도 포커스를 주지 않음)는 바깥 클릭 처리에 맡긴다
+  const onBlur = (e: FocusEvent) => {
+    const next = e.relatedTarget as Node | null;
+    if (next && !ref.current?.contains(next)) onClose(false);
+  };
+
   const done = () => onClose(true);
   let body: ReactNode = null;
   if (kind === 'link') body = <LinkForm editor={editor} prepare={restoreSelection} onDone={done} />;
@@ -128,6 +135,7 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
       className="aikive-popover"
       style={style}
       onKeyDown={onKeyDown}
+      onBlur={onBlur}
     >
       {body}
     </div>
