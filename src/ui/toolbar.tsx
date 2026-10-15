@@ -148,11 +148,19 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       isItalic: ed.isActive('italic'),
       isStrike: ed.isActive('strike'),
       isUnderline: ed.isActive('underline'),
-      blockType: ((): BlockType => {
-        const { $from, $to } = ed.state.selection;
-        const from = innermostBlockType($from);
-        // 시작과 끝 블록 종류가 다르면 섞인 선택이라 「본문」 으로 둔다
-        return from === innermostBlockType($to) ? from : 'paragraph';
+      blockType: ((): BlockType | '' => {
+        const { doc, selection } = ed.state;
+        const types = new Set<BlockType>();
+        // 양 끝만 보면 전체 선택이나 가운데 블록만 다른 선택을 한 종류로 잘못 본다
+        doc.nodesBetween(selection.from, selection.to, (node, pos) => {
+          if (types.size > 1) return false;
+          if (!node.isTextblock) return true;
+          types.add(innermostBlockType(doc.resolve(pos + 1)));
+          return false;
+        });
+        if (types.size === 0) return innermostBlockType(selection.$from);
+        // 섞인 선택을 「본문」 으로 보이면 본문을 다시 골라도 change 가 안 나 바꿀 수 없으므로 비워 둔다
+        return types.size === 1 ? [...types][0] : '';
       })(),
       align: ALIGN_OPTIONS.find((o) => ed.isActive({ textAlign: o.value }))?.value ?? '',
       canUndo: ed.can().chain().undo().run(),
@@ -199,6 +207,8 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     features.image && onPickImage && { value: 'image', label: '이미지' },
   ].filter((o): o is { value: string; label: string } => !!o);
   const insert = (value: string) => {
+    // 말풍선 툴바는 글자를 골라야 떠서 그대로 넣으면 고른 글자를 덮어쓴다 — 선택 끝에 넣는다
+    if (!editor.state.selection.empty) editor.commands.setTextSelection(editor.state.selection.to);
     if (value === 'table') chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (value === 'hr') chain().setHorizontalRule().run();
     else if (value === 'youtube') onOpenPopover('youtube');
@@ -242,6 +252,11 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
             value={state.blockType}
             onChange={(e) => setBlockType(e.target.value as BlockType)}
           >
+            {state.blockType === '' && (
+              <option value="" disabled hidden>
+                여러 종류
+              </option>
+            )}
             {blockTypes.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}

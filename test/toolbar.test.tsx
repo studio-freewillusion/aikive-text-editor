@@ -239,6 +239,31 @@ describe('Toolbar', () => {
     expect(editor.getHTML()).toContain('<table');
   });
 
+  it('제목과 본문을 섞어 고르면 문단 종류가 비어 보이고, 본문을 고르면 모두 본문이 된다', async () => {
+    createEditor('<h2>제목</h2><p>본문</p>').commands.setTextSelection({ from: 2, to: 6 });
+    renderToolbar();
+    expect(screen.getByLabelText('문단 종류')).toHaveValue('');
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'paragraph');
+    expect(editor.getHTML()).toBe('<p>제목</p><p>본문</p>');
+  });
+
+  it('전체 선택이나 가운데만 다른 선택도 섞인 것으로 본다', () => {
+    createEditor('<p>a</p><h2>b</h2><p>c</p>');
+    const { unmount } = renderToolbar();
+    expect(screen.getByLabelText('문단 종류')).toHaveValue('');
+    unmount();
+    editor.commands.setTextSelection({ from: 2, to: 9 });
+    renderToolbar();
+    expect(screen.getByLabelText('문단 종류')).toHaveValue('');
+  });
+
+  it.each(['hr', 'table'])('글자를 고른 채 %s 를 넣어도 고른 글자는 지워지지 않는다', async (value) => {
+    createEditor('<p>안녕하세요</p>').commands.setTextSelection({ from: 1, to: 6 });
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('넣기'), value);
+    expect(editor.getText()).toContain('안녕하세요');
+  });
+
   it('넣기 항목은 기능 설정을 따르고, 모두 꺼지면 사라진다', () => {
     createEditor('<p>a</p>');
     const { unmount } = renderToolbar({ features: { ...DEFAULT_FEATURES, image: false } });
