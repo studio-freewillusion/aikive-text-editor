@@ -327,4 +327,22 @@ describe('문단 종류 바꾸기 경계', () => {
     await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'ordered');
     expect(editor.getHTML()).toMatch(/^<ul><li><p>a<\/p><ol><li><p>n2<\/p><\/li><\/ol><\/li><\/ul>/);
   });
+
+  it('코드 블록과 다른 블록을 같이 골라 인용으로 바꿔도 줄바꿈이 남는다', async () => {
+    createEditor('<p>pp</p><pre><code>line1\nline2</code></pre>');
+    editor.commands.setTextSelection({ from: 2, to: 8 });
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'quote');
+    expect(editor.getHTML()).toContain('line1<br>line2');
+  });
+
+  it('글머리 목록 안 번호 하위 목록은 번호 목록으로 보이고, 글머리로 바꾸면 그 하위 목록만 바뀐다', async () => {
+    createEditor('<ul><li><p>n1</p><ol><li><p>n2</p></li></ol></li></ul>');
+    cursorAt('n2');
+    renderToolbar();
+    expect(screen.getByLabelText('문단 종류')).toHaveValue('ordered');
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'bullet');
+    expect(editor.getHTML()).toMatch(/^<ul><li><p>n1<\/p><ul><li><p>n2<\/p><\/li><\/ul><\/li><\/ul>/);
+    expect(screen.getByLabelText('문단 종류')).toHaveValue('bullet');
+  });
 });

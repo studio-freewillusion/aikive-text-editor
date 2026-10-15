@@ -1,5 +1,6 @@
 import { useEditorState, type Editor } from '@tiptap/react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import type { ResolvedPos } from '@tiptap/pm/model';
 import type { ColorOption, Features } from '../editor/types';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
 import { Bold, Code2, Italic, Link, Palette, Redo2, Strikethrough, Underline, Undo2 } from './icons';
@@ -49,6 +50,20 @@ const BLOCK_TYPES: Array<{ value: BlockType; label: string; feature: 'heading' |
   { value: 'quote', label: '인용', feature: 'blocks' },
   { value: 'code', label: '코드 블록', feature: 'blocks' },
 ];
+
+// 바깥 목록이 아니라 커서에 가장 가까운 조상으로 판정해야 글머리 목록 안 번호 하위 목록을 번호로 본다
+function innermostBlockType($pos: ResolvedPos): BlockType {
+  for (let depth = $pos.depth; depth > 0; depth -= 1) {
+    const node = $pos.node(depth);
+    const name = node.type.name;
+    if (name === 'codeBlock') return 'code';
+    if (name === 'heading') return `h${node.attrs.level as 1 | 2 | 3}`;
+    if (name === 'bulletList') return 'bullet';
+    if (name === 'orderedList') return 'ordered';
+    if (name === 'blockquote') return 'quote';
+  }
+  return 'paragraph';
+}
 
 const ALIGN_OPTIONS = [
   { value: 'left', label: '왼쪽' },
@@ -134,12 +149,10 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       isStrike: ed.isActive('strike'),
       isUnderline: ed.isActive('underline'),
       blockType: ((): BlockType => {
-        if (ed.isActive('codeBlock')) return 'code';
-        for (const level of [1, 2, 3] as const) if (ed.isActive('heading', { level })) return `h${level}`;
-        if (ed.isActive('bulletList')) return 'bullet';
-        if (ed.isActive('orderedList')) return 'ordered';
-        if (ed.isActive('blockquote')) return 'quote';
-        return 'paragraph';
+        const { $from, $to } = ed.state.selection;
+        const from = innermostBlockType($from);
+        // 시작과 끝 블록 종류가 다르면 섞인 선택이라 「본문」 으로 둔다
+        return from === innermostBlockType($to) ? from : 'paragraph';
       })(),
       align: ALIGN_OPTIONS.find((o) => ed.isActive({ textAlign: o.value }))?.value ?? '',
       canUndo: ed.can().chain().undo().run(),
@@ -161,7 +174,12 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       return;
     }
     // 코드 블록은 먼저 문단으로 바꿔야 줄바꿈이 <br> 로 남는다(clearNodes 만 거치면 줄바꿈 글자가 사라짐)
-    const c = state.blockType === 'code' ? chain().setParagraph().clearNodes() : chain().clearNodes();
+    const { from, to } = editor.state.selection;
+    let hasCode = editor.state.selection.$from.parent.type.name === 'codeBlock';
+    editor.state.doc.nodesBetween(from, to, (node) => {
+      if (node.type.name === 'codeBlock') hasCode = true;
+    });
+    const c = hasCode ? chain().setParagraph().clearNodes() : chain().clearNodes();
     if (value === 'h1' || value === 'h2' || value === 'h3') c.setHeading({ level: Number(value[1]) as 1 | 2 | 3 });
     else if (value === 'bullet') c.toggleBulletList();
     else if (value === 'ordered') c.toggleOrderedList();
