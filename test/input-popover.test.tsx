@@ -423,3 +423,17 @@ describe('입력 창이 열린 채 바뀌는 상황', () => {
     expect(screen.queryByRole('dialog', { name: '링크' })).toBeNull();
   });
 });
+
+describe('입력 창 빈 곳', () => {
+  it('창 빈 곳을 누른 뒤에도 Esc 로 닫힌다', async () => {
+    const { ed, user } = await setup();
+    act(() => {
+      ed.commands.selectAll();
+    });
+    await user.click(screen.getByRole('button', { name: '링크 연결' }));
+    const dialog = screen.getByRole('dialog', { name: '링크' });
+    await user.click(dialog);
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: '링크' })).toBeNull();
+  });
+});

@@ -306,3 +306,8 @@
   opacity: 0.5;
   pointer-events: none;
 }
+
+/* 빈 곳을 눌러 창 자체에 포커스가 가도 테두리는 그리지 않는다(Tab 순서에는 없음) */
+.aikive-popover:focus {
+  outline: none;
+}

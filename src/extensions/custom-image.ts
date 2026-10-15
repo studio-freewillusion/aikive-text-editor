@@ -266,7 +266,7 @@ class CustomImageNodeView implements NodeView {
 
     private resizePointerMoveHandler: ((event: PointerEvent) => void) | null = null;
 
-    private resizePointerUpHandler: (() => void) | null = null;
+    private resizePointerUpHandler: ((event: PointerEvent) => void) | null = null;
 
     constructor(context: ImageNodeViewContext, resizeLimits: ResizeLimits) {
         this.context = context;
@@ -627,6 +627,8 @@ class CustomImageNodeView implements NodeView {
             dot.addEventListener('pointerdown', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                // 두 번째 손가락이 닿아도 폭이 튀지 않게 처음 누른 포인터만 따라간다
+                const { pointerId } = event;
                 this.isResizing = true;
                 this.startX = event.clientX;
                 this.startWidth = this.elements.container.getBoundingClientRect().width;
@@ -638,7 +640,7 @@ class CustomImageNodeView implements NodeView {
                 );
 
                 const onPointerMove = (moveEvent: PointerEvent) => {
-                    if (!this.isResizing) {
+                    if (!this.isResizing || moveEvent.pointerId !== pointerId) {
                         return;
                     }
 
@@ -669,7 +671,11 @@ class CustomImageNodeView implements NodeView {
                     }
                 };
 
-                const onPointerUp = () => {
+                const onPointerUp = (upEvent: PointerEvent) => {
+                    if (upEvent.pointerId !== pointerId) {
+                        return;
+                    }
+
                     this.isResizing = false;
                     this.shouldResizeHeight = false;
                     document.removeEventListener('pointermove', onPointerMove);
@@ -682,8 +688,7 @@ class CustomImageNodeView implements NodeView {
                         return;
                     }
 
-                    // 끄는 동안은 소수 좌표 그대로 부드럽게 두고, 저장할 폭만 정수로 맞춘다
-                    // 끌지 않고 누르기만 하면 폭이 '100%' 그대로라 px 일 때만 맞춘다
+                    // 끄는 동안은 소수 좌표로 두고 저장할 px 폭만 정수로 맞춘다(누르기만 하면 '100%' 그대로)
                     const { width: styleWidth } = this.elements.container.style;
                     const width = Number.parseFloat(styleWidth);
 

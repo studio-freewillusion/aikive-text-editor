@@ -132,6 +132,7 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
       ref={ref}
       role="dialog"
       aria-label={LABELS[kind]}
+      tabIndex={-1}
       className="aikive-popover"
       style={style}
       onKeyDown={onKeyDown}

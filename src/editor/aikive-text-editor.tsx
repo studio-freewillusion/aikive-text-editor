@@ -131,6 +131,8 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     };
     return () => {
       storage.onChange = null;
+      // 올리는 중에 에디터가 사라지면 끝 알림이 오지 않아 쓰는 쪽 「올리는 중」 이 남는다
+      if (storage.pending > 0) uploadingChangeRef.current?.(false);
     };
   }, [editor]);
 

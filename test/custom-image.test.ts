@@ -64,3 +64,28 @@ describe('CustomImage 편집 컨트롤', () => {
         buttons.forEach((b) => expect(b.style.cursor).toBe('pointer'));
     });
 });
+
+describe('CustomImage 크기 조절', () => {
+    const pointer = (type: string, id: number, clientX: number) => {
+        const event = new MouseEvent(type, { bubbles: true, clientX });
+        Object.defineProperty(event, 'pointerId', { value: id });
+        return event;
+    };
+
+    it('처음 누른 손가락만 따라가고 다른 손가락 움직임은 무시한다', () => {
+        createEditor(`<img src="${SRC}">`);
+        editor.view.dom.querySelector('img')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const handles = editor.view.dom.querySelectorAll<HTMLElement>('[data-image-control="resize"]');
+        const handle = handles[handles.length - 1];
+        const container = handle.parentElement!;
+        handle.dispatchEvent(pointer('pointerdown', 1, 100));
+        document.dispatchEvent(pointer('pointermove', 2, 400));
+        expect(container.style.width).not.toMatch(/px$/);
+        document.dispatchEvent(pointer('pointermove', 1, 150));
+        expect(container.style.width).toBe('50px');
+        document.dispatchEvent(pointer('pointerup', 2, 150));
+        document.dispatchEvent(pointer('pointermove', 1, 160));
+        expect(container.style.width).toBe('60px');
+        document.dispatchEvent(pointer('pointerup', 1, 160));
+    });
+});
