@@ -683,9 +683,11 @@ class CustomImageNodeView implements NodeView {
                     }
 
                     // 끄는 동안은 소수 좌표 그대로 부드럽게 두고, 저장할 폭만 정수로 맞춘다
-                    const width = Number.parseFloat(this.elements.container.style.width);
+                    // 끌지 않고 누르기만 하면 폭이 '100%' 그대로라 px 일 때만 맞춘다
+                    const { width: styleWidth } = this.elements.container.style;
+                    const width = Number.parseFloat(styleWidth);
 
-                    if (Number.isFinite(width)) {
+                    if (styleWidth.endsWith('px') && Number.isFinite(width)) {
                         this.elements.container.style.width = `${Math.round(width)}px`;
                     }
 

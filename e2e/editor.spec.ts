@@ -157,3 +157,16 @@ for (const toolbar of ['fixed', 'bubble']) {
     await expect(html(page)).toContainText('alt="장면"');
   });
 }
+
+test('크기 조절 손잡이를 끌지 않고 누르기만 하면 폭이 그대로다', async ({ page }) => {
+  await open(page, '<p>a</p><img src="http://localhost:5199/sample.png">');
+  await page.locator('.ProseMirror img').first().click();
+  const handle = page.locator('[data-image-control="resize"]').last();
+  await expect(handle).toBeVisible();
+  const hb = (await handle.boundingBox())!;
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(html(page)).toContainText('width: 100%');
+  await expect(html(page)).not.toContainText('width: 100px');
+});
