@@ -79,8 +79,8 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
   // 열려 있는 동안 업로드 등이 선택을 옮겨도 적용은 열 때 고른 곳에 한다
   const bookmark = useRef(editor.state.selection.getBookmark());
   useEffect(() => {
-    const follow = ({ transaction }: { transaction: Transaction }) => {
-      bookmark.current = bookmark.current.map(transaction.mapping);
+    const follow = ({ transaction, appendedTransactions }: { transaction: Transaction; appendedTransactions: Transaction[] }) => {
+      bookmark.current = [transaction, ...appendedTransactions].reduce((mark, tr) => mark.map(tr.mapping), bookmark.current);
     };
     editor.on('transaction', follow);
     return () => {

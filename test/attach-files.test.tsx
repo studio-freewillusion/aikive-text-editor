@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/react';
+import { TextSelection } from '@tiptap/pm/state';
 import { AikiveTextEditor, type AikiveTextEditorHandle, type AikiveTextEditorProps } from '../src/editor';
 
 const png = (name: string, size = 10) => new File([new Uint8Array(size)], name, { type: 'image/png' });
@@ -357,5 +358,26 @@ describe('파일 넣기', () => {
     });
     expect(ref.current!.getHTML()).toContain('<p>abcdef</p>');
     expect(ref.current!.getHTML()).toContain('a.png');
+  });
+
+  it('글 끝에 올린 뒤 커서는 새 문단에 있어 이어 쓰면 이미지가 남는다', async () => {
+    const d = deferred();
+    const { ref, ed } = await setup(() => d.promise);
+    act(() => ref.current!.resetContent('<p>hello</p>'));
+    act(() => ed.commands.setTextSelection(6));
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([png('a.png')]);
+    });
+    await act(async () => {
+      d.resolve('https://cdn.example.com/public/a.png');
+      await done;
+    });
+    expect(ed.state.selection).toBeInstanceOf(TextSelection);
+    act(() => {
+      ed.commands.insertContent('x');
+    });
+    expect(ref.current!.getHTML()).toContain('a.png');
+    expect(ref.current!.getHTML()).toContain('<p>x</p>');
   });
 });

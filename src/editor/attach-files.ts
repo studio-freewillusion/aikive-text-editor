@@ -60,9 +60,15 @@ export async function attachFiles(editor: Editor, files: File[], pos: number, de
   let lastEnd: number | null = null;
   let lastDoc = editor.state.doc;
   // 넣은 뒤 다음 파일을 기다리는 동안 고친 내용만큼 줄바꿈 위치를 옮긴다. 이벤트 없이 본문이 바뀌었으면(스냅샷 복원) 위치를 버린다
-  const follow = ({ transaction }: { transaction: Transaction }) => {
-    if (lastEnd !== null) lastEnd = transaction.before === lastDoc ? transaction.mapping.map(lastEnd) : null;
-    lastDoc = transaction.doc;
+  // appendTransaction(끝 빈 문단 등)이 덧붙인 변경까지 따라가야 지금 본문과 맞는다
+  const follow = ({ transaction, appendedTransactions }: { transaction: Transaction; appendedTransactions: Transaction[] }) => {
+    if (lastEnd !== null) {
+      lastEnd =
+        transaction.before === lastDoc
+          ? [transaction, ...appendedTransactions].reduce((pos, tr) => tr.mapping.map(pos), lastEnd)
+          : null;
+    }
+    lastDoc = editor.state.doc;
   };
   editor.on('transaction', follow);
   // 입력 창이 열려 있으면 포커스를 빼앗지 않는다 — 창은 열 때의 선택을 따로 기억해 되살린다
