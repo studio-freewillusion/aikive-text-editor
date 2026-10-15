@@ -1,4 +1,6 @@
 import { Editor } from '@tiptap/core';
+import { NodeSelection } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -253,6 +255,41 @@ describe('Toolbar', () => {
     expect(screen.getByLabelText('문단 종류')).toHaveValue('');
     unmount();
     editor.commands.setTextSelection({ from: 2, to: 9 });
+    renderToolbar();
+    expect(screen.getByLabelText('문단 종류')).toHaveValue('');
+  });
+
+  it('이미지를 고른 채 구분선을 넣으면 경고 없이 이미지 뒤에 넣는다', async () => {
+    createEditor('<p>a</p><img src="https://example.com/x.png"><p>b</p>');
+    let imagePos = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'image') imagePos = pos;
+    });
+    editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, imagePos)));
+    const warn = vi.spyOn(console, 'warn');
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('넣기'), 'hr');
+    expect(warn).not.toHaveBeenCalled();
+    expect(editor.getHTML()).toMatch(/<img[^>]*><hr><p>b<\/p>/);
+  });
+
+  it('전체 선택한 채 구분선을 넣으면 경고 없이 글을 지키고 끝에 넣는다', async () => {
+    createEditor('<p>a</p><p>b</p>');
+    const warn = vi.spyOn(console, 'warn');
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('넣기'), 'hr');
+    expect(warn).not.toHaveBeenCalled();
+    expect(editor.getText()).toContain('a');
+    expect(editor.getHTML()).toMatch(/<p>b<\/p><hr>/);
+  });
+
+  it('표 칸을 여러 개 고르면 칸마다 종류가 다를 때 여러 종류로 본다', () => {
+    createEditor('<table><tbody><tr><td><h2>h</h2></td><td><p>p</p></td></tr></tbody></table>');
+    const cells: number[] = [];
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'tableCell') cells.push(pos);
+    });
+    editor.view.dispatch(editor.state.tr.setSelection(CellSelection.create(editor.state.doc, cells[0], cells[1])));
     renderToolbar();
     expect(screen.getByLabelText('문단 종류')).toHaveValue('');
   });

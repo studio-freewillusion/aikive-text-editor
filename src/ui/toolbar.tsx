@@ -1,6 +1,7 @@
 import { useEditorState, type Editor } from '@tiptap/react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { ResolvedPos } from '@tiptap/pm/model';
+import { NodeSelection, Selection, TextSelection } from '@tiptap/pm/state';
 import type { ColorOption, Features } from '../editor/types';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
 import { Bold, Code2, Italic, Link, Palette, Redo2, Strikethrough, Underline, Undo2 } from './icons';
@@ -151,13 +152,15 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       blockType: ((): BlockType | '' => {
         const { doc, selection } = ed.state;
         const types = new Set<BlockType>();
-        // 양 끝만 보면 전체 선택이나 가운데 블록만 다른 선택을 한 종류로 잘못 본다
-        doc.nodesBetween(selection.from, selection.to, (node, pos) => {
-          if (types.size > 1) return false;
-          if (!node.isTextblock) return true;
-          types.add(innermostBlockType(doc.resolve(pos + 1)));
-          return false;
-        });
+        // 양 끝만 보면 전체 선택이나 가운데 블록만 다른 선택을 한 종류로 잘못 본다(표 칸 여러 개는 칸마다 범위가 따로다)
+        for (const range of selection.ranges) {
+          doc.nodesBetween(range.$from.pos, range.$to.pos, (node, pos) => {
+            if (types.size > 1) return false;
+            if (!node.isTextblock) return true;
+            types.add(innermostBlockType(doc.resolve(pos + 1)));
+            return false;
+          });
+        }
         if (types.size === 0) return innermostBlockType(selection.$from);
         // 섞인 선택을 「본문」 으로 보이면 본문을 다시 골라도 change 가 안 나 바꿀 수 없으므로 비워 둔다
         return types.size === 1 ? [...types][0] : '';
@@ -208,7 +211,16 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
   ].filter((o): o is { value: string; label: string } => !!o);
   const insert = (value: string) => {
     // 고른 채 넣으면 고른 글자를 덮어쓴다(말풍선 툴바는 늘 고른 상태) — 선택 끝에 넣는다
-    if (!editor.state.selection.empty) editor.commands.setTextSelection(editor.state.selection.to);
+    const { selection } = editor.state;
+    if (selection instanceof TextSelection) {
+      if (!selection.empty) editor.commands.setTextSelection(selection.to);
+    } else {
+      // 이미지·표 칸 선택의 끝은 글자 자리가 아니라 그대로 커서를 두면 ProseMirror 가 경고한다 — 가장 가까운 글자 자리로 옮긴다
+      const $end = selection.ranges[selection.ranges.length - 1].$to;
+      const forward = selection instanceof NodeSelection;
+      const target = Selection.findFrom($end, forward ? 1 : -1, true) ?? Selection.findFrom($end, forward ? -1 : 1, true);
+      if (target) editor.view.dispatch(editor.state.tr.setSelection(target));
+    }
     if (value === 'table') chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (value === 'hr') chain().setHorizontalRule().run();
     else if (value === 'youtube') onOpenPopover('youtube');
