@@ -274,3 +274,12 @@
     background-color: var(--aikive-toolbar-hover);
   }
 }
+
+/* 터치는 9px 손잡이를 잡기 어려워 보이는 크기는 두고 누르는 영역만 넓힌다 */
+@media (pointer: coarse) {
+  .aikive-image-resize-handle::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}

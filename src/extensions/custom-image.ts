@@ -4,6 +4,7 @@ import type { DOMOutputSpec, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { EditorView, NodeView } from '@tiptap/pm/view';
 
 import { normalizeImageHref, safeImageHref } from '../sanitize';
+import { openInputPopover } from './input-popover-bridge';
 
 type ImageAttrs = {
     src?: string | null;
@@ -56,6 +57,7 @@ type ImageNodeViewContext = {
             editable?: boolean;
         };
         view: EditorView;
+        storage: unknown;
     };
     view: EditorView;
     getPos?: (() => number) | boolean;
@@ -262,9 +264,9 @@ class CustomImageNodeView implements NodeView {
 
     private shouldResizeHeight = false;
 
-    private resizeMouseMoveHandler: ((event: MouseEvent) => void) | null = null;
+    private resizePointerMoveHandler: ((event: PointerEvent) => void) | null = null;
 
-    private resizeMouseUpHandler: (() => void) | null = null;
+    private resizePointerUpHandler: (() => void) | null = null;
 
     constructor(context: ImageNodeViewContext, resizeLimits: ResizeLimits) {
         this.context = context;
@@ -297,14 +299,15 @@ class CustomImageNodeView implements NodeView {
         this.isDestroyed = true;
         document.removeEventListener('click', this.handleDocumentClick);
 
-        if (this.resizeMouseMoveHandler) {
-            document.removeEventListener('mousemove', this.resizeMouseMoveHandler);
-            this.resizeMouseMoveHandler = null;
+        if (this.resizePointerMoveHandler) {
+            document.removeEventListener('pointermove', this.resizePointerMoveHandler);
+            this.resizePointerMoveHandler = null;
         }
 
-        if (this.resizeMouseUpHandler) {
-            document.removeEventListener('mouseup', this.resizeMouseUpHandler);
-            this.resizeMouseUpHandler = null;
+        if (this.resizePointerUpHandler) {
+            document.removeEventListener('pointerup', this.resizePointerUpHandler);
+            document.removeEventListener('pointercancel', this.resizePointerUpHandler);
+            this.resizePointerUpHandler = null;
         }
 
         this.isResizing = false;
@@ -480,17 +483,19 @@ class CustomImageNodeView implements NodeView {
             control.appendChild(button);
         });
 
-        control.appendChild(this.createLinkButton());
+        control.appendChild(this.createControlButton('링크 연결', this.createLinkIcon(), () => this.openPopover('link')));
+        control.appendChild(this.createControlButton('대체 텍스트', document.createTextNode('ALT'), () => this.openPopover('alt')));
 
         this.elements.container.appendChild(control);
     }
 
-    // 말풍선 툴바는 이미지를 고르면 숨어, 거기서는 이 컨트롤 바로만 링크를 건다.
-    private createLinkButton() {
+    // 말풍선 툴바는 이미지를 고르면 숨어, 거기서는 이 컨트롤 바로만 링크·대체 텍스트를 바꾼다.
+    private createControlButton(label: string, content: Node, onClick: () => void) {
         const button = document.createElement('button');
         button.type = 'button';
         button.dataset.imageControl = 'button';
-        button.title = '링크 연결';
+        button.title = label;
+        button.setAttribute('aria-label', label);
         button.style.cssText = compactStyle([
             'width: 24px',
             'height: 24px',
@@ -501,8 +506,10 @@ class CustomImageNodeView implements NodeView {
             'justify-content: center',
             'padding: 0',
             'cursor: pointer',
+            'color: #18181b',
+            'font: 700 10px/1 sans-serif',
         ]);
-        button.appendChild(this.createLinkIcon());
+        button.appendChild(content);
         button.addEventListener('mouseover', () => {
             button.style.opacity = '0.6';
         });
@@ -512,10 +519,21 @@ class CustomImageNodeView implements NodeView {
         button.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
-            this.editImageLink();
+            onClick();
         });
 
         return button;
+    }
+
+    private openPopover(kind: 'link' | 'alt') {
+        const { getPos } = this.context;
+
+        if (typeof getPos !== 'function') {
+            return;
+        }
+
+        this.hideControls();
+        openInputPopover(this.context.editor, kind, getPos());
     }
 
     private createLinkIcon() {
@@ -540,38 +558,6 @@ class CustomImageNodeView implements NodeView {
         });
 
         return svg;
-    }
-
-    private editImageLink() {
-        const { view, getPos } = this.context;
-
-        if (typeof getPos !== 'function') {
-            return;
-        }
-
-        const attrs = this.context.node.attrs as ImageAttrs;
-        const url = window.prompt('URL', attrs.href ?? '');
-
-        if (url === null) {
-            return;
-        }
-
-        const href = url === '' ? null : normalizeImageHref(url);
-
-        if (url !== '' && !href) {
-            alert('유효하지 않은 URL 입니다. http:// 또는 https:// 주소만 넣을 수 있습니다.');
-
-            return;
-        }
-
-        const target = href
-            ? window.confirm('새 탭에서 열까요? (확인 = 새 탭, 취소 = 같은 탭)')
-                ? '_blank'
-                : null
-            : null;
-
-        this.hideControls();
-        view.dispatch(view.state.tr.setNodeMarkup(getPos(), undefined, { ...attrs, href, target }));
     }
 
     private createAlignIcon(type: 'left' | 'center' | 'right') {
@@ -626,6 +612,7 @@ class CustomImageNodeView implements NodeView {
         positions.forEach((positionStyle, index) => {
             const dot = document.createElement('div');
             dot.dataset.imageControl = 'resize';
+            dot.className = 'aikive-image-resize-handle';
             dot.style.cssText = compactStyle([
                 'position: absolute',
                 'width: 9px',
@@ -633,10 +620,11 @@ class CustomImageNodeView implements NodeView {
                 'border: 1.5px solid #6C6C6C',
                 'border-radius: 9999px',
                 'background: #fff',
+                'touch-action: none',
                 positionStyle,
             ]);
 
-            dot.addEventListener('mousedown', (event) => {
+            dot.addEventListener('pointerdown', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 this.isResizing = true;
@@ -649,7 +637,7 @@ class CustomImageNodeView implements NodeView {
                     this.startHeight > 0
                 );
 
-                const onMouseMove = (moveEvent: MouseEvent) => {
+                const onPointerMove = (moveEvent: PointerEvent) => {
                     if (!this.isResizing) {
                         return;
                     }
@@ -665,10 +653,13 @@ class CustomImageNodeView implements NodeView {
                             : this.resizeLimits.maxWidth === undefined
                               ? parentContentWidth
                               : Math.min(this.resizeLimits.maxWidth, parentContentWidth);
-                    const nextWidth = clampWidth(this.startWidth + deltaX, {
-                        ...this.resizeLimits,
-                        maxWidth,
-                    });
+                    // pointer 좌표는 소수라 그대로 쓰면 저장 폭이 1126.5px 처럼 된다 — 마우스 이벤트 시절처럼 정수로 맞춘다
+                    const nextWidth = Math.round(
+                        clampWidth(this.startWidth + deltaX, {
+                            ...this.resizeLimits,
+                            maxWidth,
+                        }),
+                    );
 
                     this.elements.container.style.width = `${nextWidth}px`;
 
@@ -681,13 +672,14 @@ class CustomImageNodeView implements NodeView {
                     }
                 };
 
-                const onMouseUp = () => {
+                const onPointerUp = () => {
                     this.isResizing = false;
                     this.shouldResizeHeight = false;
-                    document.removeEventListener('mousemove', onMouseMove);
-                    document.removeEventListener('mouseup', onMouseUp);
-                    this.resizeMouseMoveHandler = null;
-                    this.resizeMouseUpHandler = null;
+                    document.removeEventListener('pointermove', onPointerMove);
+                    document.removeEventListener('pointerup', onPointerUp);
+                    document.removeEventListener('pointercancel', onPointerUp);
+                    this.resizePointerMoveHandler = null;
+                    this.resizePointerUpHandler = null;
 
                     if (this.isDestroyed) {
                         return;
@@ -697,10 +689,11 @@ class CustomImageNodeView implements NodeView {
                     this.showControls();
                 };
 
-                this.resizeMouseMoveHandler = onMouseMove;
-                this.resizeMouseUpHandler = onMouseUp;
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
+                this.resizePointerMoveHandler = onPointerMove;
+                this.resizePointerUpHandler = onPointerUp;
+                document.addEventListener('pointermove', onPointerMove);
+                document.addEventListener('pointerup', onPointerUp);
+                document.addEventListener('pointercancel', onPointerUp);
             });
 
             this.elements.container.appendChild(dot);

@@ -198,3 +198,28 @@ describe('유튜브 창', () => {
     expect(screen.getByText('유튜브 주소를 확인해 주세요.')).toBeInTheDocument();
   });
 });
+
+describe('이미지 조작 바', () => {
+  const IMG = '<p>a</p><img src="https://cdn.example.com/a.png">';
+  const showControls = (container: HTMLElement) => {
+    fireEvent.click(container.querySelector('.ProseMirror img')!.parentElement!);
+  };
+
+  it('대체 텍스트 버튼으로 alt 를 넣는다', async () => {
+    const { ref, user } = await setup({ initialContent: IMG });
+    showControls(document.body);
+    await user.click(document.querySelector('[data-image-control][aria-label="대체 텍스트"]')!);
+    const input = screen.getByRole('textbox', { name: '대체 텍스트' });
+    expect(input).toHaveAttribute('maxlength', '200');
+    await user.type(input, '장면{Enter}');
+    expect(ref.current!.getHTML()).toContain('alt="장면"');
+  });
+
+  it('링크 버튼은 이미지 링크 창을 연다', async () => {
+    const { ref, user } = await setup({ initialContent: IMG });
+    showControls(document.body);
+    await user.click(document.querySelector('[data-image-control][aria-label="링크 연결"]')!);
+    await user.type(screen.getByLabelText('주소'), 'example.com{Enter}');
+    expect(ref.current!.getHTML()).toMatch(/<a href="https:\/\/example.com" target="_blank"[^>]*><img/);
+  });
+});

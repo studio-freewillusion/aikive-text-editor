@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { applyLink, currentLink, insertYoutube, removeLink } from '../editor/popover-actions';
+import { ALT_MAX_LENGTH, applyAlt, applyLink, currentLink, insertYoutube, removeLink } from '../editor/popover-actions';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
 
 export interface PopoverAnchor {
@@ -79,6 +79,7 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
   let body: ReactNode = null;
   if (kind === 'link') body = <LinkForm editor={editor} onDone={done} />;
   if (kind === 'youtube') body = <YoutubeForm editor={editor} onDone={done} />;
+  if (kind === 'alt') body = <AltForm editor={editor} onDone={done} />;
 
   return (
     <div
@@ -212,6 +213,24 @@ function YoutubeForm({ editor, onDone }: { editor: Editor; onDone: () => void })
       <div className="aikive-popover__actions">
         <button type="button" className="is-primary" onClick={apply}>
           넣기
+        </button>
+      </div>
+    </>
+  );
+}
+
+function AltForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
+  const [value, setValue] = useState(() => (editor.getAttributes('image').alt as string | undefined) ?? '');
+  const apply = () => {
+    applyAlt(editor, value);
+    onDone();
+  };
+  return (
+    <>
+      <PopoverField label="대체 텍스트" value={value} error="" maxLength={ALT_MAX_LENGTH} onChange={setValue} onEnter={apply} />
+      <div className="aikive-popover__actions">
+        <button type="button" className="is-primary" onClick={apply}>
+          적용
         </button>
       </div>
     </>

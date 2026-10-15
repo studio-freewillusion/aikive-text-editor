@@ -121,3 +121,26 @@ test('화면 아래쪽 글자에서 열면 링크 창이 위로 열린다', asyn
   const lastBox = (await last.boundingBox())!;
   expect(box.y + box.height).toBeLessThanOrEqual(lastBox.y);
 });
+
+test('터치로 이미지 손잡이를 끌면 폭이 바뀐다', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, baseURL: 'http://localhost:5199' });
+  const page = await context.newPage();
+  await open(page, '<p>a</p><img src="http://localhost:5199/sample.png">');
+  await page.locator('.ProseMirror img').first().tap();
+  const handle = page.locator('[data-image-control="resize"]').last();
+  await expect(handle).toBeVisible();
+  const hb = (await handle.boundingBox())!;
+  const x = hb.x + hb.width / 2;
+  const y = hb.y + hb.height / 2;
+  await handle.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true, clientX: x, clientY: y });
+  for (const dx of [20, 40, 60, 80, 100]) {
+    await page.evaluate(
+      ([cx, cy]) =>
+        document.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'touch', clientX: cx, clientY: cy, bubbles: true })),
+      [x - dx, y],
+    );
+  }
+  await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true })));
+  await expect(html(page)).toContainText(/width: \d+px/);
+  await context.close();
+});
