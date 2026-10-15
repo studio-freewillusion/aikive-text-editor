@@ -283,3 +283,17 @@
     inset: -8px;
   }
 }
+
+.aikive-upload-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 4rem;
+  margin: 0.5rem 0;
+  border: 1px dashed var(--aikive-toolbar-border);
+  border-radius: 0.5rem;
+  color: var(--aikive-text-fg);
+  font-size: 0.8125rem;
+  opacity: 0.6;
+  user-select: none;
+}

@@ -7,7 +7,13 @@ import { GripVertical } from '../ui/icons';
 import { shouldShowBubbleMenu } from '../ui/should-show-bubble-menu';
 import { Toolbar } from '../ui/toolbar';
 import { InputPopover, type PopoverAnchor } from '../ui/input-popover';
-import { openInputPopover, type InputPopoverBridgeStorage, type PopoverKind } from '../extensions';
+import {
+  openInputPopover,
+  uploadPending,
+  type InputPopoverBridgeStorage,
+  type PopoverKind,
+  type UploadPlaceholderStorage,
+} from '../extensions';
 import { parseContent } from './parse-content';
 import { attachFiles, IMAGE_MIME_TYPES, type FileDeps } from './attach-files';
 import { applySourceContent, SOURCE_HTML_ERROR_MESSAGE } from './source-mode';
@@ -28,6 +34,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     onUploadImage,
     onNotice,
     onSourceModeChange,
+    onUploadingChange,
     className,
     contentClassName,
   },
@@ -42,6 +49,9 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   const [sourceMode, setSourceModeState] = useState(false);
   const [sourceText, setSourceText] = useState('');
   const sourceModeChangeRef = useRef(onSourceModeChange);
+  const uploadingChangeRef = useRef(onUploadingChange);
+  uploadingChangeRef.current = onUploadingChange;
+  const [uploading, setUploading] = useState(false);
   sourceModeChangeRef.current = onSourceModeChange;
   // 핸들은 다시 그려지기 전까지 옛 state 를 보므로, 같은 tick 에 이어 불러도 맞게 모드·소스 글은 ref 로 읽는다
   const sourceModeRef = useRef(false);
@@ -108,6 +118,18 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     };
   }, [editor]);
 
+  useEffect(() => {
+    if (!editor) return;
+    const storage = (editor.storage as unknown as { uploadPlaceholder: UploadPlaceholderStorage }).uploadPlaceholder;
+    storage.onChange = (on) => {
+      setUploading(on);
+      uploadingChangeRef.current?.(on);
+    };
+    return () => {
+      storage.onChange = null;
+    };
+  }, [editor]);
+
   const anchorOf = useCallback((): PopoverAnchor => {
     if (!editor) return { left: 0, top: 0, bottom: 0 };
     const { view } = editor;
@@ -140,6 +162,8 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
 
   const setSourceMode = (on: boolean) => {
     if (!editor || on === sourceModeRef.current) return;
+    // 들어가면 본문이 숨어 올리던 이미지를 넣을 자리가 사라진다
+    if (on && uploadPending(editor) > 0) return;
     if (on) {
       editor.commands.blur();
       updateSourceText(editor.getHTML());
@@ -191,6 +215,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       },
       setSourceMode,
       isEmpty: () => !editor || editor.isEmpty,
+      isUploading: () => !!editor && uploadPending(editor) > 0,
       insertFiles: async (files) => {
         if (editor) await attachFiles(editor, files, editor.state.selection.anchor, fileDeps());
       },
@@ -210,6 +235,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       onPickImage={onUploadImage ? () => fileInputRef.current?.click() : undefined}
       onOpenPopover={(kind) => openInputPopover(editor, kind)}
       colors={colors}
+      uploading={uploading}
       scrollable={coarsePointer}
     />
   ) : null;

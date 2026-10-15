@@ -56,6 +56,7 @@ export interface AikiveTextEditorProps {
   onUploadImage?: (file: File) => Promise<string>;
   onNotice?: (message: string, kind: NoticeKind) => void;
   onSourceModeChange?: (on: boolean) => void;
+  onUploadingChange?: (uploading: boolean) => void;
   className?: string;
   contentClassName?: string;
 }
@@ -72,6 +73,7 @@ export interface AikiveTextEditorHandle {
   restoreSnapshot(snapshot: Snapshot): boolean;
   setSourceMode(on: boolean): void;
   isEmpty(): boolean;
+  isUploading(): boolean;
   insertFiles(files: File[]): Promise<void>;
   focus(): void;
 }

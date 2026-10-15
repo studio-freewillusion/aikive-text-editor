@@ -35,6 +35,7 @@ export interface ToolbarProps {
   onOpenPopover: (kind: PopoverKind) => void;
   scrollable?: boolean;
   colors?: ColorOption[];
+  uploading?: boolean;
 }
 
 const FONT_SIZE_OPTIONS = ['10px', '11px', '12px', '14px', '16px', '18px', '21px', '24px', '36px', '48px', '60px', '72px'];
@@ -108,7 +109,7 @@ function ToolButton({
   );
 }
 
-export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors }: ToolbarProps) {
+export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors, uploading }: ToolbarProps) {
   const [colorOpen, setColorOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const [fade, setFade] = useState({ start: false, end: false });
@@ -347,7 +348,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
         </ToolButton>
       )}
       {features.sourceMode && (
-        <ToolButton label="HTML 모드" pressed={sourceMode} onClick={onToggleSource}>
+        <ToolButton label="HTML 모드" pressed={sourceMode} disabled={uploading && !sourceMode} onClick={onToggleSource}>
           <Code2 />
         </ToolButton>
       )}

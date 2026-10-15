@@ -5,7 +5,7 @@ import { TableKit } from '@tiptap/extension-table';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontFamily, FontSize, LineHeight, TextStyle } from '@tiptap/extension-text-style';
 import StarterKit from '@tiptap/starter-kit';
-import { ClampColumnWidth, CustomImage, CustomLink, InputPopoverBridge, StoredYoutube, VideoBlock } from '../extensions';
+import { ClampColumnWidth, CustomImage, CustomLink, InputPopoverBridge, StoredYoutube, UploadPlaceholder, VideoBlock } from '../extensions';
 import { isAllowedEditorUri } from '../sanitize';
 import { attachFiles, type FileDeps } from './attach-files';
 import type { HtmlClassNames } from './types';
@@ -54,5 +54,6 @@ export function buildExtensions(
       },
     }),
     InputPopoverBridge,
+    UploadPlaceholder,
   ];
 }
