@@ -380,4 +380,34 @@ describe('파일 넣기', () => {
     expect(ref.current!.getHTML()).toContain('a.png');
     expect(ref.current!.getHTML()).toContain('<p>x</p>');
   });
+
+  it.each([
+    ['글 끝', '<p>one</p>', 4, /<img[^>]*><p>Q<\/p>$/],
+    ['문단 사이', '<p>one</p><p>two</p>', 4, /<img[^>]*><p>Q<\/p><p>two<\/p>$/],
+  ])('%s에 올린 뒤 빈 문단이 더 생기지 않고 이미지 바로 뒤 새 줄에서 이어 쓴다', async (_, content, pos, expected) => {
+    const { ref, ed } = await setup(async () => 'https://cdn.example.com/public/a.png');
+    act(() => ref.current!.resetContent(content));
+    act(() => ed.commands.setTextSelection(pos));
+    await act(() => ref.current!.insertFiles([png('a.png')]));
+    act(() => {
+      ed.commands.insertContent('Q');
+    });
+    expect(ref.current!.getHTML()).toMatch(expected);
+  });
+
+  it('올리는 중에 에디터가 사라지면 올리는 중 아님을 알린다', async () => {
+    const d = deferred();
+    const onUploadingChange = vi.fn();
+    const ref = createRef<AikiveTextEditorHandle>();
+    const { container, unmount } = render(
+      <AikiveTextEditor ref={ref} onUploadImage={() => d.promise} onUploadingChange={onUploadingChange} />,
+    );
+    await waitFor(() => expect(container.querySelector('.ProseMirror')).toBeTruthy());
+    act(() => {
+      void ref.current!.insertFiles([png('a.png')]);
+    });
+    expect(onUploadingChange.mock.calls).toEqual([[true]]);
+    unmount();
+    expect(onUploadingChange.mock.calls).toEqual([[true], [false]]);
+  });
 });

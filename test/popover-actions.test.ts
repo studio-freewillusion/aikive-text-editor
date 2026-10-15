@@ -117,15 +117,23 @@ describe('insertYoutube', () => {
   });
 
   it.each([
-    ['글 중간', '<p>abc</p><p>def</p>', 4, '<p>Zdef</p>'],
-    ['글 끝', '<p>abc</p>', 4, '<p>Z</p>'],
-  ])('%s에 넣고 바로 이어 써도 영상이 남고 다음 글자 자리에 들어간다', (_, content, pos, typed) => {
+    ['글 중간', '<p>abc</p><p>def</p>', 4, /<\/div><p>Z<\/p><p>def<\/p>/],
+    ['글 끝', '<p>abc</p>', 4, /<\/div><p>Z<\/p>$/],
+    ['표 칸 가운데', '<table><tbody><tr><td><p>a</p></td><td><p>b</p></td></tr></tbody></table>', 5, /<\/div><p>Z<\/p><\/td><td[^>]*><p>b<\/p>/],
+    ['목록 항목 가운데', '<ul><li><p>one</p></li><li><p>two</p></li></ul>', 6, /<\/div><p>Z<\/p><\/li><li><p>two<\/p>/],
+  ])('%s에 넣고 바로 이어 쓰면 영상 바로 뒤 새 줄에 들어간다', (_, content, pos, typed) => {
     create(content).commands.setTextSelection(pos);
     insertYoutube(editor, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
     expect(editor.state.selection).toBeInstanceOf(TextSelection);
     editor.commands.insertContent('Z');
     expect(editor.getHTML()).toContain('data-youtube-video');
-    expect(editor.getHTML()).toContain(typed);
+    expect(editor.getHTML()).toMatch(typed);
+  });
+
+  it('통째로 고른 이미지를 영상으로 바꾸지 않고 그 뒤에 넣는다', () => {
+    create('<p>a</p><img src="https://cdn.example.com/a.png"><p>b</p>').commands.setNodeSelection(3);
+    expect(insertYoutube(editor, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBeNull();
+    expect(editor.getHTML()).toMatch(/<img[^>]*><div data-youtube-video/);
   });
 
   it.each(['https://example.com/v', '', 'javascript:alert(1)'])('「%s」 는 거부한다', (input) => {
@@ -140,9 +148,38 @@ describe('applyAlt', () => {
     create(IMG).commands.setNodeSelection(0);
     applyAlt(editor, ' 장면 ');
     expect(editor.getHTML()).toContain('alt="장면"');
+    editor.commands.setNodeSelection(0);
     applyAlt(editor, '');
     expect(editor.getHTML()).not.toContain('alt=');
+    editor.commands.setNodeSelection(0);
     applyAlt(editor, 'a'.repeat(250));
     expect(editor.getHTML()).toContain(`alt="${'a'.repeat(ALT_MAX_LENGTH)}"`);
+  });
+});
+
+describe('적용 뒤 이어 쓰기', () => {
+  it('글자에 링크를 건 뒤 이어 치면 링크 글자를 지우지 않고 링크 밖에 쓴다', () => {
+    create('<p>hello world</p>').commands.setTextSelection({ from: 1, to: 6 });
+    applyLink(editor, 'example.com', true);
+    expect(editor.state.selection.empty).toBe(true);
+    editor.commands.insertContent('Q');
+    expect(editor.getHTML()).toMatch(/<a [^>]*>hello<\/a>Q world/);
+  });
+
+  it('주소를 글자로 넣은 뒤 이어 쳐도 링크에 붙지 않는다', () => {
+    create('<p>안녕</p>').commands.setTextSelection(3);
+    applyLink(editor, 'example.com', true);
+    editor.commands.insertContent('.');
+    expect(editor.getHTML()).toMatch(/https:\/\/example.com<\/a>\.<\/p>/);
+  });
+
+  it.each(['link', 'alt'] as const)('이미지 %s 적용 뒤 이어 쳐도 이미지가 남고 새 문단은 만들지 않는다', (kind) => {
+    create('<p>a</p><img src="https://cdn.example.com/a.png"><p>b</p>').commands.setNodeSelection(3);
+    if (kind === 'link') applyLink(editor, 'example.com', true);
+    else applyAlt(editor, '장면');
+    expect(editor.state.selection).toBeInstanceOf(TextSelection);
+    editor.commands.insertContent('Q');
+    expect(editor.getHTML()).toContain('<img');
+    expect(editor.getHTML()).toMatch(/<p>Qb<\/p>$/);
   });
 });

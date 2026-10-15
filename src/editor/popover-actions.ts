@@ -1,6 +1,7 @@
 import type { Editor } from '@tiptap/core';
-import { NodeSelection, Selection } from '@tiptap/pm/state';
+import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { normalizeImageHref } from '../sanitize';
+import { placeCaretAfterBlock } from './caret-after';
 
 export const LINK_EMPTY_MESSAGE = '주소를 입력해 주세요.';
 export const LINK_SCHEME_MESSAGE = 'http 또는 https 주소만 넣을 수 있습니다.';
@@ -29,6 +30,7 @@ export function applyLink(editor: Editor, input: string, newTab: boolean): strin
   // 이미지는 링크 서식이 안 붙어 이미지 속성으로 건다
   if (editor.isActive('image')) {
     editor.chain().focus().setImageLink({ href, target: newTab ? '_blank' : null }).run();
+    placeCaretAfterBlock(editor, editor.state.selection.to, { newLine: false });
     return null;
   }
   // 같은 탭은 _self·기본 rel 로 남긴다 — 비워 두면 다시 불러올 때 기본값(새 탭·rel)이 붙어 HTML 이 달라진다
@@ -39,9 +41,14 @@ export function applyLink(editor: Editor, input: string, newTab: boolean): strin
   };
   if (editor.state.selection.empty && !editor.isActive('link')) {
     editor.chain().focus().insertContent({ type: 'text', text: href, marks: [{ type: 'link', attrs }] }).run();
-    return null;
+  } else if (!editor.chain().focus().extendMarkRange('link').setLink(attrs).run()) {
+    return LINK_SCHEME_MESSAGE;
   }
-  return editor.chain().focus().extendMarkRange('link').setLink(attrs).run() ? null : LINK_SCHEME_MESSAGE;
+  // 링크 끝으로 커서를 옮기고 다음 입력엔 링크를 빼야 이어 쓴 글자가 링크를 지우거나 링크에 붙지 않는다
+  const { tr } = editor.state;
+  tr.setSelection(TextSelection.create(tr.doc, editor.state.selection.to)).removeStoredMark(editor.schema.marks.link);
+  editor.view.dispatch(tr);
+  return null;
 }
 
 export function removeLink(editor: Editor): void {
@@ -53,13 +60,15 @@ export function insertYoutube(editor: Editor, input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return YOUTUBE_INVALID_MESSAGE;
   const src = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) || trimmed.startsWith('//') ? trimmed : `https://${trimmed}`;
-  if (!editor.chain().focus().setYoutubeVideo({ src }).run()) return YOUTUBE_INVALID_MESSAGE;
-  // 넣은 뒤 영상 노드가 선택된 채면 다음 입력이 영상을 지운다 — 영상 뒤 글자 자리로 옮긴다
-  const { selection, doc } = editor.state;
+  if (!editor.can().setYoutubeVideo({ src })) return YOUTUBE_INVALID_MESSAGE;
+  const { selection } = editor.state;
+  // 이미지 등 블록이 통째로 선택돼 있으면 바꾸지 않고 그 뒤에 넣는다
   if (selection instanceof NodeSelection) {
-    const next = Selection.findFrom(doc.resolve(selection.to), 1, true);
-    if (next) editor.view.dispatch(editor.state.tr.setSelection(next));
+    editor.chain().focus().insertContentAt(selection.to, { type: 'youtube', attrs: { src } }).run();
+  } else {
+    editor.chain().focus().setYoutubeVideo({ src }).run();
   }
+  placeCaretAfterBlock(editor, editor.state.selection.to, { newLine: true });
   return null;
 }
 
@@ -69,4 +78,5 @@ export function applyAlt(editor: Editor, input: string): void {
     .focus()
     .updateAttributes('image', { alt: input.trim().slice(0, ALT_MAX_LENGTH) || null })
     .run();
+  placeCaretAfterBlock(editor, editor.state.selection.to, { newLine: false });
 }

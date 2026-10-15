@@ -8,6 +8,7 @@ import {
   uploadPlaceholderKey,
 } from '../extensions/upload-placeholder';
 import { isInputPopoverOpen } from '../extensions/input-popover-bridge';
+import { placeCaretAfterBlock } from './caret-after';
 import type { NoticeKind } from './types';
 
 export type Notice = (message: string, kind: NoticeKind) => void;
@@ -59,8 +60,7 @@ export async function attachFiles(editor: Editor, files: File[], pos: number, de
   changeUploadPending(editor, jobs.length);
   let lastEnd: number | null = null;
   let lastDoc = editor.state.doc;
-  // 넣은 뒤 다음 파일을 기다리는 동안 고친 내용만큼 줄바꿈 위치를 옮긴다. 이벤트 없이 본문이 바뀌었으면(스냅샷 복원) 위치를 버린다
-  // appendTransaction(끝 빈 문단 등)이 덧붙인 변경까지 따라가야 지금 본문과 맞는다
+  // 기다리는 동안의 편집(덧붙은 끝 문단 포함)만큼 줄바꿈 위치를 옮기고, 이벤트 없이 본문이 바뀌었으면(스냅샷 복원) 버린다
   const follow = ({ transaction, appendedTransactions }: { transaction: Transaction; appendedTransactions: Transaction[] }) => {
     if (lastEnd !== null) {
       lastEnd =
@@ -107,8 +107,7 @@ export async function attachFiles(editor: Editor, files: File[], pos: number, de
   }
   // 이미지 뒤에서 바로 이어 쓰도록 새 줄로 옮긴다(기존 에디터와 같은 동작)
   if (lastEnd !== null && editor.state.doc === lastDoc) {
-    // enter 는 체인의 선택이 아니라 화면의 선택으로 계산되므로 선택을 먼저 옮긴다
-    chain().setTextSelection(lastEnd).run();
-    chain().enter().run();
+    placeCaretAfterBlock(editor, lastEnd, { newLine: true });
+    if (!isInputPopoverOpen(editor)) editor.commands.focus();
   }
 }
