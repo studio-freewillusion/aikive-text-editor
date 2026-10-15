@@ -58,9 +58,11 @@ export async function attachFiles(editor: Editor, files: File[], pos: number, de
   }
   changeUploadPending(editor, jobs.length);
   let lastEnd: number | null = null;
-  // 넣은 뒤 다음 파일을 기다리는 동안 고친 내용만큼 줄바꿈 위치를 옮긴다
+  let lastDoc = editor.state.doc;
+  // 넣은 뒤 다음 파일을 기다리는 동안 고친 내용만큼 줄바꿈 위치를 옮긴다. 이벤트 없이 본문이 바뀌었으면(스냅샷 복원) 위치를 버린다
   const follow = ({ transaction }: { transaction: Transaction }) => {
-    if (lastEnd !== null) lastEnd = transaction.mapping.map(lastEnd);
+    if (lastEnd !== null) lastEnd = transaction.before === lastDoc ? transaction.mapping.map(lastEnd) : null;
+    lastDoc = transaction.doc;
   };
   editor.on('transaction', follow);
   // 입력 창이 열려 있으면 포커스를 빼앗지 않는다 — 창은 열 때의 선택을 따로 기억해 되살린다
@@ -98,5 +100,9 @@ export async function attachFiles(editor: Editor, files: File[], pos: number, de
     editor.off('transaction', follow);
   }
   // 이미지 뒤에서 바로 이어 쓰도록 새 줄로 옮긴다(기존 에디터와 같은 동작)
-  if (lastEnd !== null) chain().setTextSelection(lastEnd).enter().run();
+  if (lastEnd !== null && editor.state.doc === lastDoc) {
+    // enter 는 체인의 선택이 아니라 화면의 선택으로 계산되므로 선택을 먼저 옮긴다
+    chain().setTextSelection(lastEnd).run();
+    chain().enter().run();
+  }
 }

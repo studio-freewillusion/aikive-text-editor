@@ -334,4 +334,28 @@ describe('파일 넣기', () => {
     expect(ref.current!.getHTML()).toContain('b.png');
     expect(onNotice.mock.calls.filter(([m]) => m === DROPPED)).toHaveLength(0);
   });
+
+  it('넣은 뒤 커서를 옮기고 다음 파일이 실패해도 그 문단을 쪼개지 않는다', async () => {
+    const a = deferred();
+    const b = deferred();
+    const upload = vi.fn().mockReturnValueOnce(a.promise).mockReturnValueOnce(b.promise);
+    const { ref, ed } = await setup(upload);
+    act(() => ref.current!.resetContent('<p>abcdef</p>'));
+    act(() => ed.commands.setTextSelection(7));
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([png('a.png'), png('b.png')]);
+    });
+    await act(async () => {
+      a.resolve('https://cdn.example.com/public/a.png');
+      await flush();
+    });
+    act(() => ed.commands.setTextSelection(4));
+    await act(async () => {
+      b.reject(new Error('x'));
+      await done;
+    });
+    expect(ref.current!.getHTML()).toContain('<p>abcdef</p>');
+    expect(ref.current!.getHTML()).toContain('a.png');
+  });
 });
