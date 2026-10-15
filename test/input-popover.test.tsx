@@ -181,7 +181,7 @@ describe('유튜브 창', () => {
     act(() => {
       ed.commands.setTextSelection(3);
     });
-    await user.click(screen.getByRole('button', { name: '유튜브 넣기' }));
+    await user.selectOptions(screen.getByLabelText('넣기'), 'youtube');
     await user.type(screen.getByLabelText('유튜브 주소'), 'https://www.youtube.com/watch?v=dQw4w9WgXcQ{Enter}');
     expect(screen.queryByRole('dialog', { name: '유튜브' })).toBeNull();
     expect(ref.current!.getHTML()).toContain('data-youtube-video');
@@ -192,7 +192,7 @@ describe('유튜브 창', () => {
     act(() => {
       ed.commands.setTextSelection(3);
     });
-    await user.click(screen.getByRole('button', { name: '유튜브 넣기' }));
+    await user.selectOptions(screen.getByLabelText('넣기'), 'youtube');
     await user.type(screen.getByLabelText('유튜브 주소'), 'https://example.com/v');
     await user.click(screen.getByRole('button', { name: '넣기' }));
     expect(screen.getByText('유튜브 주소를 확인해 주세요.')).toBeInTheDocument();

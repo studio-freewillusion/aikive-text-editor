@@ -68,12 +68,6 @@ describe('Toolbar', () => {
 
 
 
-  it('표 삽입 버튼으로 표를 넣는다', async () => {
-    createEditor('<p>안녕</p>');
-    renderToolbar();
-    await userEvent.setup().click(screen.getByRole('button', { name: '표 삽입' }));
-    expect(editor.getHTML()).toContain('<table');
-  });
 
   it('표 안에서 열을 추가한다', async () => {
     createEditor('<table><tbody><tr><td><p>A</p></td></tr></tbody></table>');
@@ -83,39 +77,7 @@ describe('Toolbar', () => {
     expect(editor.getHTML().match(/<td/g)).toHaveLength(2);
   });
 
-  it.each([
-    ['heading', '제목 1'],
-    ['fontSize', '글자 크기'],
-    ['color', '글자색'],
-    ['lineHeight', '줄간격'],
-    ['align', '왼쪽 정렬'],
-    ['table', '표 삽입'],
-    ['link', '링크 연결'],
-    ['sourceMode', 'HTML 모드'],
-    ['undoRedo', '되돌리기'],
-    ['list', '글머리 목록'],
-    ['blocks', '블록'],
-    ['youtube', '유튜브 넣기'],
-  ] as const)('features.%s 를 끄면 「%s」 가 사라지고 켜면 보인다', (key, label) => {
-    createEditor('<p>a</p>');
-    const { unmount } = renderToolbar({ features: { ...DEFAULT_FEATURES, [key]: false } });
-    expect(screen.queryByLabelText(label)).toBeNull();
-    unmount();
-    renderToolbar();
-    expect(screen.getByLabelText(label)).toBeInTheDocument();
-  });
 
-  it('이미지 넣기는 onPickImage 가 있고 features.image 가 켜졌을 때만 보인다', () => {
-    createEditor('<p>a</p>');
-    const { unmount } = renderToolbar();
-    expect(screen.queryByLabelText('이미지 넣기')).toBeNull();
-    unmount();
-    const r2 = renderToolbar({ onPickImage: () => {} });
-    expect(screen.getByLabelText('이미지 넣기')).toBeInTheDocument();
-    r2.unmount();
-    renderToolbar({ onPickImage: () => {}, features: { ...DEFAULT_FEATURES, image: false } });
-    expect(screen.queryByLabelText('이미지 넣기')).toBeNull();
-  });
 
   it('글꼴 선택은 어떤 설정에서도 없다', () => {
     createEditor('<p>a</p>');
@@ -175,37 +137,8 @@ describe('Toolbar', () => {
     expect(screen.getByRole('button', { name: '링크 연결' })).toHaveClass('is-active');
   });
 
-  it('목록 버튼으로 글머리·번호 목록을 넣는다', async () => {
-    createEditor('<p>안녕</p>');
-    editor.commands.setTextSelection(2);
-    renderToolbar();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: '글머리 목록' }));
-    expect(editor.getHTML()).toContain('<ul>');
-    expect(screen.getByRole('button', { name: '글머리 목록' })).toHaveAttribute('aria-pressed', 'true');
-    await user.click(screen.getByRole('button', { name: '번호 목록' }));
-    expect(editor.getHTML()).toContain('<ol>');
-  });
 
-  it.each([
-    ['toggleBlockquote', '<blockquote>'],
-    ['setHorizontalRule', '<hr>'],
-    ['toggleCodeBlock', '<pre>'],
-  ])('블록 select 에서 %s 를 고르면 %s 를 넣고 select 는 「블록」 으로 돌아간다', async (action, tag) => {
-    createEditor('<p>안녕</p>');
-    renderToolbar();
-    await userEvent.setup().selectOptions(screen.getByLabelText('블록'), action);
-    expect(editor.getHTML()).toContain(tag);
-    expect(screen.getByLabelText('블록')).toHaveValue('');
-  });
 
-  it('유튜브 넣기를 누르면 유튜브 창을 연다', async () => {
-    createEditor('<p>안녕</p>');
-    const onOpenPopover = vi.fn();
-    renderToolbar({ onOpenPopover });
-    await userEvent.setup().click(screen.getByRole('button', { name: '유튜브 넣기' }));
-    expect(onOpenPopover).toHaveBeenCalledWith('youtube');
-  });
 
   it('colors 를 넘기면 그 색들로 팔레트를 만든다', async () => {
     createEditor('<p>안녕</p>');
@@ -217,5 +150,142 @@ describe('Toolbar', () => {
     expect(editor.getHTML()).toMatch(/color: (#ffffff|rgb\(255, 255, 255\))/);
     expect(screen.getByRole('button', { name: '글자색 기본' })).toBeInTheDocument();
     expect(screen.getByLabelText('글자색 직접 고르기')).toBeInTheDocument();
+  });
+
+  const optionValues = (label: string) =>
+    Array.from((screen.getByLabelText(label) as HTMLSelectElement).options).map((o) => o.value);
+
+  it.each([
+    ['fontSize', '글자 크기'],
+    ['color', '글자색'],
+    ['lineHeight', '줄간격'],
+    ['align', '정렬'],
+    ['link', '링크 연결'],
+    ['sourceMode', 'HTML 모드'],
+    ['undoRedo', '되돌리기'],
+  ] as const)('features.%s 를 끄면 「%s」 가 사라지고 켜면 보인다', (key, label) => {
+    createEditor('<p>a</p>');
+    const { unmount } = renderToolbar({ features: { ...DEFAULT_FEATURES, [key]: false } });
+    expect(screen.queryByLabelText(label)).toBeNull();
+    unmount();
+    renderToolbar();
+    expect(screen.getByLabelText(label)).toBeInTheDocument();
+  });
+
+  it('문단 종류는 켜진 기능의 항목만 두고, 모두 끄면 사라진다', () => {
+    createEditor('<p>a</p>');
+    const { unmount } = renderToolbar();
+    expect(optionValues('문단 종류')).toEqual(['paragraph', 'h1', 'h2', 'h3', 'bullet', 'ordered', 'quote', 'code']);
+    unmount();
+    const r2 = renderToolbar({ features: { ...DEFAULT_FEATURES, heading: false, blocks: false } });
+    expect(optionValues('문단 종류')).toEqual(['paragraph', 'bullet', 'ordered']);
+    r2.unmount();
+    renderToolbar({ features: { ...DEFAULT_FEATURES, heading: false, list: false, blocks: false } });
+    expect(screen.queryByLabelText('문단 종류')).toBeNull();
+  });
+
+  it.each([
+    ['h2', /<h2>안녕<\/h2>/],
+    ['bullet', /<ul><li><p>안녕<\/p><\/li><\/ul>/],
+    ['ordered', /<ol><li><p>안녕<\/p><\/li><\/ol>/],
+    ['quote', /<blockquote><p>안녕<\/p><\/blockquote>/],
+    ['code', /<pre><code>안녕<\/code><\/pre>/],
+  ])('문단 종류에서 %s 를 고르면 그 블록으로 바꾸고 선택 상자가 지금 종류를 보인다', async (value, html) => {
+    createEditor('<p>안녕</p>').commands.setTextSelection(2);
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), value);
+    expect(editor.getHTML()).toMatch(html);
+    expect(screen.getByLabelText('문단 종류')).toHaveValue(value);
+  });
+
+  it.each([
+    ['<h3>안녕</h3>', 2, 'h3'],
+    ['<ul><li><p>안녕</p></li></ul>', 4, 'bullet'],
+    ['<blockquote><p>안녕</p></blockquote>', 3, 'quote'],
+  ])('%s 에서 본문을 고르면 문단으로 되돌린다', async (content, pos, current) => {
+    createEditor(content);
+    editor.commands.setTextSelection(pos);
+    renderToolbar();
+    expect(screen.getByLabelText('문단 종류')).toHaveValue(current);
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'paragraph');
+    // 편집 중에는 끝에 빈 문단이 덧붙으므로 앞부분만 본다
+    expect(editor.getHTML()).toMatch(/^<p>안녕<\/p>(<p><\/p>)?$/);
+  });
+
+  it('정렬을 고르면 반영하고 지금 정렬을 보인다', async () => {
+    createEditor('<p>안녕</p>').commands.setTextSelection(2);
+    renderToolbar();
+    expect(screen.getByLabelText('정렬')).toHaveValue('');
+    await userEvent.setup().selectOptions(screen.getByLabelText('정렬'), 'center');
+    expect(editor.getHTML()).toContain('text-align: center');
+    expect(screen.getByLabelText('정렬')).toHaveValue('center');
+  });
+
+  it('넣기는 켜진 기능만 두고, 넣은 뒤 「넣기」 로 돌아간다', async () => {
+    createEditor('<p>안녕</p>').commands.setTextSelection(3);
+    const onOpenPopover = vi.fn();
+    const onPickImage = vi.fn();
+    renderToolbar({ onOpenPopover, onPickImage });
+    expect(optionValues('넣기')).toEqual(['', 'table', 'hr', 'youtube', 'image']);
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText('넣기'), 'hr');
+    expect(editor.getHTML()).toContain('<hr>');
+    expect(screen.getByLabelText('넣기')).toHaveValue('');
+    await user.selectOptions(screen.getByLabelText('넣기'), 'youtube');
+    expect(onOpenPopover).toHaveBeenCalledWith('youtube');
+    await user.selectOptions(screen.getByLabelText('넣기'), 'image');
+    expect(onPickImage).toHaveBeenCalled();
+    await user.selectOptions(screen.getByLabelText('넣기'), 'table');
+    expect(editor.getHTML()).toContain('<table');
+  });
+
+  it('넣기 항목은 기능 설정을 따르고, 모두 꺼지면 사라진다', () => {
+    createEditor('<p>a</p>');
+    const { unmount } = renderToolbar({ features: { ...DEFAULT_FEATURES, image: false } });
+    expect(optionValues('넣기')).toEqual(['', 'table', 'hr', 'youtube']);
+    unmount();
+    renderToolbar({ features: { ...DEFAULT_FEATURES, table: false, blocks: false, youtube: false } });
+    expect(screen.queryByLabelText('넣기')).toBeNull();
+  });
+
+  it('표 안에서는 넣기에 표가 없다', () => {
+    createEditor('<table><tbody><tr><td><p>A</p></td></tr></tbody></table>');
+    editor.commands.setTextSelection(3);
+    renderToolbar();
+    expect(optionValues('넣기')).not.toContain('table');
+  });
+
+  it('글자색 팔레트는 밀어서 넘기는 툴바 영역 밖에 그려 잘리지 않는다', async () => {
+    createEditor('<p>안녕</p>');
+    renderToolbar();
+    await userEvent.setup().click(screen.getByRole('button', { name: '글자색' }));
+    const palette = screen.getByRole('button', { name: '글자색 빨강' }).closest('.aikive-toolbar__palette')!;
+    expect(screen.getByRole('toolbar').contains(palette)).toBe(false);
+  });
+});
+
+describe('글자색 팔레트 위치', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    editor?.destroy();
+  });
+
+  it('툴바 상자 오른쪽 끝을 넘지 않게 왼쪽으로 당긴다', async () => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('aikive-toolbar-wrap') ? 300 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('aikive-toolbar__palette') ? 160 : 0;
+    });
+    const rect = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('aria-label') === '글자색') return new DOMRect(250, 0, 28, 28);
+      return rect.call(this);
+    });
+    createEditor('<p>안녕</p>');
+    renderToolbar();
+    await userEvent.setup().click(screen.getByRole('button', { name: '글자색' }));
+    const palette = screen.getByRole('button', { name: '글자색 빨강' }).closest<HTMLElement>('.aikive-toolbar__palette')!;
+    expect(palette.style.left).toBe('140px');
   });
 });

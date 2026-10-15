@@ -16,13 +16,13 @@ describe('에디터 툴바 연결', () => {
     expect(screen.queryByRole('toolbar')).toBeNull();
   });
 
-  it('이미지 넣기 버튼은 업로드 함수가 있을 때만 보이고 고른 파일을 올린다', async () => {
+  it('넣기의 이미지는 업로드 함수가 있을 때만 보이고 고른 파일을 올린다', async () => {
     const upload = vi.fn(async () => 'https://cdn.example.com/public/a.png');
     const { container, rerender } = render(<AikiveTextEditor initialContent="<p>a</p>" />);
     await waitFor(() => expect(screen.getByRole('toolbar')).toBeInTheDocument());
-    expect(screen.queryByLabelText('이미지 넣기')).toBeNull();
+    expect(screen.queryByRole('option', { name: '이미지' })).toBeNull();
     rerender(<AikiveTextEditor initialContent="<p>a</p>" onUploadImage={upload} />);
-    expect(screen.getByLabelText('이미지 넣기')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '이미지' })).toBeInTheDocument();
     const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
     expect(input.accept).toBe('image/png,image/jpeg,image/gif,image/webp');
     await act(async () => {
