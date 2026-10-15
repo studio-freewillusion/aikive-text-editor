@@ -143,9 +143,9 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       }
     }
     try {
-      const start = view.coordsAtPos(selection.from);
+      // 긴 선택은 시작과 끝을 함께 기준으로 삼으면 위아래 어디에도 안 들어가 끝 줄을 기준으로 한다
       const end = view.coordsAtPos(selection.to);
-      return { left: start.left, top: start.top, bottom: end.bottom };
+      return { left: end.left, top: end.top, bottom: end.bottom };
     } catch {
       // 화면에 그려지지 않아 좌표를 못 읽으면(테스트 환경 등) 본문 위쪽에 둔다
       const r = view.dom.getBoundingClientRect();

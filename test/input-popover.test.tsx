@@ -45,8 +45,8 @@ describe('placePopover', () => {
     expect(placePopover({ left: 100, top: 700, bottom: 720 }, size, viewport)).toEqual({ top: 572, left: 100 });
   });
 
-  it('위도 모자라면 아래에 둔다', () => {
-    expect(placePopover({ left: 100, top: 50, bottom: 720 }, size, viewport).top).toBe(728);
+  it('위아래 모두 모자라면 화면 안으로 끌어올린다', () => {
+    expect(placePopover({ left: 100, top: 50, bottom: 720 }, size, viewport).top).toBe(672);
   });
 
   it('오른쪽으로 넘치면 화면 안으로 민다', () => {

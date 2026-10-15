@@ -19,7 +19,8 @@ export function placePopover(
 ) {
   const below = anchor.bottom + GAP;
   const above = anchor.top - GAP - size.height;
-  const top = below + size.height > viewport.height && above >= 0 ? above : below;
+  const preferred = below + size.height > viewport.height && above >= 0 ? above : below;
+  const top = Math.max(EDGE, Math.min(preferred, viewport.height - size.height - EDGE));
   const left = Math.max(EDGE, Math.min(anchor.left, viewport.width - size.width - EDGE));
   return { top, left };
 }
