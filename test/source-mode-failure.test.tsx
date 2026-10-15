@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createRef } from 'react';
 import { expect, it, vi } from 'vitest';
 
@@ -18,6 +18,7 @@ it('HTML 을 적용하지 못하면 안내하고 HTML 모드에 머물며 모드
   render(<AikiveTextEditor ref={ref} initialContent="<p>a</p>" onSourceModeChange={onSourceModeChange} onNotice={onNotice} />);
   await waitFor(() => expect(ref.current?.getHTML()).toBe('<p>a</p>'));
   act(() => ref.current!.setSourceMode(true));
+  fireEvent.change(screen.getByLabelText('HTML 소스'), { target: { value: '<p>b</p>' } });
   act(() => ref.current!.setSourceMode(false));
   expect(onNotice).toHaveBeenCalledWith(expect.any(String), 'error');
   expect(onSourceModeChange.mock.calls).toEqual([[true]]);

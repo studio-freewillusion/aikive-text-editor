@@ -62,4 +62,54 @@ describe('파일 넣기', () => {
     expect(ref.current!.getHTML()).not.toContain('<video');
     expect(ref.current!.getHTML()).toContain('글');
   });
+  it('영상 파일을 여러 개 넣어도 안내는 한 번만 띄운다', async () => {
+    const upload = vi.fn(async () => 'https://cdn.example.com/public/a.png');
+    const { ref, onNotice } = await setup(upload);
+    await act(() => ref.current!.insertFiles([mp4(), mp4(), png('a.png')]));
+    expect(onNotice.mock.calls.filter(([m]) => m === '영상 파일은 첨부할 수 없습니다.')).toHaveLength(1);
+  });
+
+  it('올리는 동안 앞에 글을 더 써도 이미지는 원래 자리 뒤에 들어간다', async () => {
+    let resolve!: (url: string) => void;
+    const upload = vi.fn(() => new Promise<string>((r) => (resolve = r)));
+    const { ref, ed } = await setup(upload);
+    act(() => ref.current!.resetContent('<p>ab</p>'));
+    act(() => ed.commands.setTextSelection(3));
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([png('a.png')]);
+    });
+    await act(async () => {
+      ed.commands.insertContentAt(1, 'XYZ');
+    });
+    await act(async () => {
+      resolve('https://cdn.example.com/public/a.png');
+      await done;
+    });
+    expect(ref.current!.getHTML()).toMatch(/^<p>XYZab<\/p><img src="https:\/\/cdn.example.com\/public\/a.png"/);
+  });
+
+  it('올리는 동안 문서가 줄어도 남은 파일까지 넣는다', async () => {
+    const resolves: Array<(url: string) => void> = [];
+    const upload = vi.fn(() => new Promise<string>((r) => resolves.push(r)));
+    const { ref, ed } = await setup(upload);
+    act(() => ref.current!.resetContent('<p>abcdefgh</p>'));
+    act(() => ed.commands.setTextSelection(9));
+    let done!: Promise<void>;
+    act(() => {
+      done = ref.current!.insertFiles([png('a.png'), png('b.png')]);
+    });
+    await act(async () => {
+      ed.commands.setContent('<p>a</p>');
+      resolves[0]('https://cdn.example.com/public/a.png');
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+      resolves[1]('https://cdn.example.com/public/b.png');
+      await done;
+    });
+    const html = ref.current!.getHTML();
+    expect(html).toContain('public/a.png');
+    expect(html).toContain('public/b.png');
+  });
 });

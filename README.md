@@ -7,7 +7,7 @@ tiptap 기반 리치 텍스트 에디터와 본문 뷰어 (React)
 npm 에 올리기 전까지는 GitHub Release 의 `.tgz` 주소로 설치합니다.
 
 ```bash
-npm install https://github.com/studio-freewillusion/aikive-text-editor/releases/download/v0.1.2/studio-freewillusion-aikive-text-editor-0.1.2.tgz
+npm install https://github.com/studio-freewillusion/aikive-text-editor/releases/download/v0.1.3/studio-freewillusion-aikive-text-editor-0.1.3.tgz
 ```
 
 React 19 가 필요합니다(`peerDependencies`).

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import DOMPurify from 'isomorphic-dompurify';
 import { sanitizeRichHtml } from '../src/sanitize';
 
 describe('sanitizeRichHtml', () => {
@@ -40,5 +41,10 @@ describe('sanitizeRichHtml', () => {
     );
     expect(out).toContain('loading="lazy"');
     expect(out).toContain('preload="none"');
+  });
+  it('패키지 정화 규칙은 쓰는 쪽이 같은 라이브러리를 직접 부를 때는 걸리지 않는다', () => {
+    sanitizeRichHtml('<p>a</p>');
+    const out = DOMPurify.sanitize('<a href="https://example.com" target="_blank">x</a>', { ADD_ATTR: ['target'] });
+    expect(out).not.toContain('rel=');
   });
 });

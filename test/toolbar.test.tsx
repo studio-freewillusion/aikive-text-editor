@@ -205,4 +205,21 @@ describe('Toolbar', () => {
     expect(bar).toHaveClass('is-fade-start');
     expect(bar).not.toHaveClass('is-fade-end');
   });
+  it('같은 탭으로 고른 글자 링크는 저장했다 다시 불러와도 같은 탭이다', async () => {
+    createEditor('<p>안녕</p>');
+    renderToolbar();
+    vi.spyOn(window, 'prompt').mockReturnValue('https://example.com');
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
+    const saved = editor.getHTML();
+    editor.destroy();
+    createEditor(saved);
+    expect(editor.getHTML()).not.toContain('target="_blank"');
+  });
+
+  it('글자와 링크 걸린 이미지를 함께 고르면 링크 버튼을 활성으로 보이지 않는다', () => {
+    createEditor('<p>글</p><a href="https://example.com"><img src="https://cdn.example.com/a.png"></a>');
+    renderToolbar();
+    expect(screen.getByRole('button', { name: '링크 연결' })).not.toHaveClass('is-active');
+  });
 });
