@@ -144,3 +144,16 @@ test('터치로 이미지 손잡이를 끌면 폭이 바뀐다', async ({ browse
   await expect(html(page)).toContainText(/width: \d+px/);
   await context.close();
 });
+
+for (const toolbar of ['fixed', 'bubble']) {
+  test(`이미지 조작 바의 대체 텍스트로 alt 를 넣는다(${toolbar})`, async ({ page }) => {
+    await page.goto(`/?toolbar=${toolbar}&content=` + encodeURIComponent('<p>a</p><img src="http://localhost:5199/sample.png">'));
+    await page.locator('.ProseMirror img').first().click();
+    await page.locator('[data-image-control][aria-label="대체 텍스트"]').click();
+    const input = page.getByRole('dialog', { name: '대체 텍스트' }).getByRole('textbox');
+    await expect(input).toBeFocused();
+    await input.fill('장면');
+    await input.press('Enter');
+    await expect(html(page)).toContainText('alt="장면"');
+  });
+}
