@@ -361,3 +361,36 @@ test('더 보기 상자 안에서 링크 입력 창을 열면 상자는 닫힌�
   await expect(page.locator('.aikive-popover')).toBeVisible();
   await expect(panel).toBeHidden();
 });
+
+test('더 보기 상자가 열린 채 본문에서 Esc 를 눌러도 이어 치는 글자는 본문에 들어간다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.locator('.ProseMirror p').click();
+  await page.keyboard.press('End');
+  await page.getByRole('button', { name: '더 보기' }).click();
+  await page.locator('.ProseMirror').focus();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Escape');
+  await page.keyboard.type('ab');
+  await expect(html(page)).toHaveText('<p>좁은 칸 글자ab</p>');
+  await expect(page.locator('.aikive-toolbar__more')).toBeHidden();
+});
+
+test('더 보기 상자가 열린 채 링크 입력 창을 Esc 로 닫으면 입력 창만 닫히고 본문에 이어 쓸 수 있다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.locator('.ProseMirror p').click();
+  await page.keyboard.press('End');
+  await page.getByRole('button', { name: '더 보기' }).click();
+  await page.locator('.ProseMirror').focus();
+  await page.keyboard.press('End');
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.locator('.aikive-popover')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.aikive-popover')).toBeHidden();
+  await expect(page.locator('.ProseMirror')).toBeFocused();
+  await page.keyboard.type('z');
+  await expect(html(page)).toContainText('z');
+});

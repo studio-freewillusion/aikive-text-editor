@@ -543,10 +543,17 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     // 바깥 다이얼로그(Radix 등)가 document 캡처에서 Esc 를 먼저 받아 통째로 닫히지 않게 window 캡처에서 끊는다
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      // 링크 입력 창이 열려 있으면 그 Esc 는 입력 창 몫이다(둘 다 window 캡처라 여기서 먼저 받는다)
+      const bridge = (editor.storage as unknown as { inputPopoverBridge?: { isOpen?: boolean } }).inputPopoverBridge;
+      if (bridge?.isOpen) return;
       e.preventDefault();
       e.stopPropagation();
       setMoreOpen(false);
-      barRef.current?.querySelector<HTMLButtonElement>('[aria-label="더 보기"]')?.focus();
+      // 본문에서 누른 Esc 면 포커스를 그대로 둬야 이어 치는 글자가 본문에 들어간다(Safari 는 버튼을 눌러도 포커스가 body 에 남는다)
+      const active = document.activeElement;
+      if (!active || active === document.body || wrapRef.current?.contains(active)) {
+        barRef.current?.querySelector<HTMLButtonElement>('[aria-label="더 보기"]')?.focus();
+      }
     };
     document.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('keydown', onKeyDown, true);
@@ -554,7 +561,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       document.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('keydown', onKeyDown, true);
     };
-  }, [moreOpen]);
+  }, [moreOpen, editor]);
 
   return (
     <div ref={wrapRef} className="aikive-toolbar-wrap">
