@@ -154,8 +154,14 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
   const chain = () => editor.chain().focus();
   const blockTypes = BLOCK_TYPES.filter((t) => t.feature === null || features[t.feature]);
   const setBlockType = (value: BlockType) => {
-    // 목록·인용을 벗기고 문단으로 되돌린 뒤 고른 종류로 바꾼다
-    const c = chain().clearNodes();
+    const isList = (t: BlockType) => t === 'bullet' || t === 'ordered';
+    // 목록끼리는 그 자리에서 종류만 바꿔야 목록이 쪼개지거나 하위 목록 들여쓰기가 풀리지 않는다
+    if (isList(value) && isList(state.blockType)) {
+      (value === 'bullet' ? chain().toggleBulletList() : chain().toggleOrderedList()).run();
+      return;
+    }
+    // 코드 블록은 먼저 문단으로 바꿔야 줄바꿈이 <br> 로 남는다(clearNodes 만 거치면 줄바꿈 글자가 사라짐)
+    const c = state.blockType === 'code' ? chain().setParagraph().clearNodes() : chain().clearNodes();
     if (value === 'h1' || value === 'h2' || value === 'h3') c.setHeading({ level: Number(value[1]) as 1 | 2 | 3 });
     else if (value === 'bullet') c.toggleBulletList();
     else if (value === 'ordered') c.toggleOrderedList();
@@ -175,7 +181,6 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     else if (value === 'youtube') onOpenPopover('youtube');
     else if (value === 'image') onPickImage?.();
   };
-  // 팔레트는 밀어서 넘기는 툴바(overflow) 밖에 그려야 잘리지 않아 버튼 위치를 재서 맞춘다
   // 좁은 화면에서 툴바 상자 오른쪽 밖으로 나가지 않게 연 뒤 폭을 재서 당긴다
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
@@ -184,6 +189,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     const max = wrap.clientWidth - palette.offsetWidth;
     setPaletteLeft((left) => Math.max(0, Math.min(left, max)));
   }, [colorOpen]);
+  // 팔레트는 밀어서 넘기는 툴바(overflow) 밖에 그려야 잘리지 않아 버튼 위치를 재서 맞춘다
   const toggleColor = (e: MouseEvent<HTMLButtonElement>) => {
     const wrap = wrapRef.current;
     if (wrap) setPaletteLeft(e.currentTarget.getBoundingClientRect().left - wrap.getBoundingClientRect().left);

@@ -289,3 +289,42 @@ describe('글자색 팔레트 위치', () => {
     expect(palette.style.left).toBe('140px');
   });
 });
+
+describe('문단 종류 바꾸기 경계', () => {
+  afterEach(() => editor?.destroy());
+
+  const cursorAt = (text: string) => {
+    let found = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (found < 0 && node.isText && node.text?.includes(text)) found = pos + 1;
+    });
+    editor.commands.setTextSelection(found);
+  };
+
+  it.each([
+    ['paragraph', '<p>line1<br>line2</p>'],
+    ['bullet', '<ul><li><p>line1<br>line2</p></li></ul>'],
+  ])('코드 블록을 %s 로 바꿔도 줄바꿈이 <br> 로 남는다', async (value, expected) => {
+    createEditor('<pre><code>line1\nline2</code></pre>');
+    cursorAt('line1');
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), value);
+    expect(editor.getHTML()).toContain(expected);
+  });
+
+  it('목록 가운데 항목에서 번호 목록으로 바꾸면 목록 전체가 그 자리에서 바뀐다', async () => {
+    createEditor('<ul><li><p>b1</p></li><li><p>b2</p></li><li><p>b3</p></li></ul>');
+    cursorAt('b2');
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'ordered');
+    expect(editor.getHTML()).toMatch(/^<ol><li><p>b1<\/p><\/li><li><p>b2<\/p><\/li><li><p>b3<\/p><\/li><\/ol>/);
+  });
+
+  it('하위 목록에서 바꾸면 그 하위 목록만 바뀌고 들여쓰기는 남는다', async () => {
+    createEditor('<ul><li><p>a</p><ul><li><p>n2</p></li></ul></li></ul>');
+    cursorAt('n2');
+    renderToolbar();
+    await userEvent.setup().selectOptions(screen.getByLabelText('문단 종류'), 'ordered');
+    expect(editor.getHTML()).toMatch(/^<ul><li><p>a<\/p><ol><li><p>n2<\/p><\/li><\/ol><\/li><\/ul>/);
+  });
+});
