@@ -201,6 +201,7 @@ describe('유튜브 창', () => {
 
 describe('이미지 조작 바', () => {
   const IMG = '<p>a</p><img src="https://cdn.example.com/a.png">';
+  // jsdom 은 elementFromPoint 가 없어 본문 안 mousedown 을 ProseMirror 가 처리하다 예외가 난다 — 조작 바는 click 만 보낸다
   const showControls = (container: HTMLElement) => {
     fireEvent.click(container.querySelector('.ProseMirror img')!.parentElement!);
   };
@@ -208,7 +209,7 @@ describe('이미지 조작 바', () => {
   it('대체 텍스트 버튼으로 alt 를 넣는다', async () => {
     const { ref, user } = await setup({ initialContent: IMG });
     showControls(document.body);
-    await user.click(document.querySelector('[data-image-control][aria-label="대체 텍스트"]')!);
+    fireEvent.click(document.querySelector('[data-image-control][aria-label="대체 텍스트"]')!);
     const input = screen.getByRole('textbox', { name: '대체 텍스트' });
     expect(input).toHaveAttribute('maxlength', '200');
     await user.type(input, '장면{Enter}');
@@ -218,7 +219,7 @@ describe('이미지 조작 바', () => {
   it('링크 버튼은 이미지 링크 창을 연다', async () => {
     const { ref, user } = await setup({ initialContent: IMG });
     showControls(document.body);
-    await user.click(document.querySelector('[data-image-control][aria-label="링크 연결"]')!);
+    fireEvent.click(document.querySelector('[data-image-control][aria-label="링크 연결"]')!);
     await user.type(screen.getByLabelText('주소'), 'example.com{Enter}');
     expect(ref.current!.getHTML()).toMatch(/<a href="https:\/\/example.com" target="_blank"[^>]*><img/);
   });
