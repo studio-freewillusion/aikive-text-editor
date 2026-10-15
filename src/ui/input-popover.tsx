@@ -55,10 +55,14 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
       setPos({ top: target.top - originY, left: target.left - originX });
     };
     place();
+    // 오류 줄 등으로 창 높이가 바뀌면 위로 연 창이 고른 글자를 가리므로 다시 잡는다
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
+    if (ref.current) observer?.observe(ref.current);
     window.addEventListener('resize', place);
     // 본문을 감싼 스크롤 영역이 움직여도 따라가도록 캡처로 받는다
     window.addEventListener('scroll', place, true);
     return () => {
+      observer?.disconnect();
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
@@ -173,7 +177,7 @@ export function PopoverField({
         }}
       />
       {error && (
-        <p id={errorId} className="aikive-popover__error">
+        <p id={errorId} className="aikive-popover__error" role="alert">
           {error}
         </p>
       )}

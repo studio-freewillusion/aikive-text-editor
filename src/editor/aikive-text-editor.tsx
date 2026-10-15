@@ -103,6 +103,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   // useEditor 는 옵션이 바뀌어도 편집 가능 여부를 그대로 둔다
   useEffect(() => {
     if (editor && editor.isEditable !== editable) editor.setEditable(editable);
+    if (!editable) setPopover(null);
   }, [editor, editable]);
 
   useEffect(() => {

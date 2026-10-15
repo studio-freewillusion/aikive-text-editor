@@ -301,3 +301,67 @@ describe('입력 창과 바깥 환경', () => {
     expect(ref.current!.getHTML()).toContain('a.png');
   });
 });
+
+describe('입력 창 마무리', () => {
+  it('오류 문구는 화면 낭독기가 바로 읽도록 alert 로 알린다', async () => {
+    const { ed, user } = await setup();
+    act(() => {
+      ed.commands.selectAll();
+    });
+    await user.click(screen.getByRole('button', { name: '링크 연결' }));
+    await user.type(screen.getByLabelText('주소'), 'javascript:x{Enter}');
+    expect(screen.getByRole('alert')).toHaveTextContent('http 또는 https 주소만 넣을 수 있습니다.');
+  });
+
+  it('창 크기가 바뀌면 위치를 다시 잡는다', async () => {
+    const callbacks: Array<() => void> = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: () => void) {
+          callbacks.push(cb);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    let shift = 0;
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (!this.classList.contains('aikive-popover')) return original.call(this);
+      return new DOMRect((Number.parseFloat(this.style.left) || 0) + shift, Number.parseFloat(this.style.top) || 0, 0, 0);
+    });
+    try {
+      const { ed, user } = await setup();
+      act(() => {
+        ed.commands.selectAll();
+      });
+      await user.click(screen.getByRole('button', { name: '링크 연결' }));
+      const dialog = screen.getByRole('dialog', { name: '링크' });
+      expect(dialog.style.left).toBe('8px');
+      shift = 30;
+      act(() => callbacks.forEach((cb) => cb()));
+      expect(dialog.style.left).toBe('-22px');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('편집 불가가 되면 창을 닫고, 다시 편집 가능해져도 저절로 뜨지 않는다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    const { container, rerender } = render(<AikiveTextEditor ref={ref} initialContent="<p>안녕</p>" />);
+    let ed: Editor | undefined;
+    await waitFor(() => {
+      ed = (container.querySelector('.ProseMirror') as unknown as { editor?: Editor } | null)?.editor;
+      expect(ed).toBeTruthy();
+    });
+    act(() => {
+      ed!.commands.selectAll();
+    });
+    await userEvent.setup().click(screen.getByRole('button', { name: '링크 연결' }));
+    expect(screen.getByRole('dialog', { name: '링크' })).toBeInTheDocument();
+    rerender(<AikiveTextEditor ref={ref} initialContent="<p>안녕</p>" editable={false} />);
+    rerender(<AikiveTextEditor ref={ref} initialContent="<p>안녕</p>" editable />);
+    expect(screen.queryByRole('dialog', { name: '링크' })).toBeNull();
+  });
+});
