@@ -72,6 +72,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   const fileInputRef = useRef<HTMLInputElement>(null);
   const features = { ...DEFAULT_FEATURES, ...featuresProp };
   const [popover, setPopover] = useState<PopoverKind | null>(null);
+  const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
   const linkEnabledRef = useRef(features.link);
   linkEnabledRef.current = features.link;
 
@@ -255,12 +256,14 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     />
   ) : null;
   const useBubble = toolbar === 'bubble' && !coarsePointer && !sourceMode;
+  // 말풍선은 화면이 아니라 에디터 좌우 안에서만 밀어, 본문 밖(제목 칸 등)으로 나가지 않게 한다
+  const bubbleShift = rootEl ? { boundary: rootEl, padding: 0 } : true;
 
   return (
-    <div className={['aikive-text-editor', className].filter(Boolean).join(' ')}>
+    <div ref={setRootEl} className={['aikive-text-editor', className].filter(Boolean).join(' ')}>
       {editable && !useBubble && <div className="aikive-text-editor__toolbar">{toolbarNode}</div>}
       {editable && editor && useBubble && (
-        <BubbleMenu editor={editor} options={{ placement: 'top', offset: 8 }} updateDelay={0} shouldShow={shouldShowBubbleMenu}>
+        <BubbleMenu editor={editor} options={{ placement: 'top', offset: 8, shift: bubbleShift }} updateDelay={0} shouldShow={shouldShowBubbleMenu}>
           {toolbarNode}
         </BubbleMenu>
       )}

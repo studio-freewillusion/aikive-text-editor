@@ -170,3 +170,30 @@ test('크기 조절 손잡이를 끌지 않고 누르기만 하면 폭이 그대
   await expect(html(page)).toContainText('width: 100%');
   await expect(html(page)).not.toContainText('width: 100px');
 });
+
+test('말풍선 툴바는 에디터 좌우 밖으로 나가지 않는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await page.goto('/?toolbar=bubble&content=' + encodeURIComponent('<p>왼쪽 끝 글자에서 고른다 그리고 오른쪽 끝까지 이어지는 꽤 긴 문장입니다 끝</p>'));
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 700px; margin-left: 300px; }' });
+  const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+  for (const word of ['왼쪽', '끝']) {
+    const text = page.locator('.ProseMirror p').first();
+    await text.evaluate((el, w) => {
+      const node = el.firstChild!;
+      const i = w === '왼쪽' ? 0 : node.textContent!.length - 1;
+      const range = document.createRange();
+      range.setStart(node, i);
+      range.setEnd(node, i + w.length);
+      const sel = window.getSelection()!;
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }, word);
+    await page.locator('.ProseMirror').focus();
+    const bar = page.getByRole('toolbar', { name: '서식' });
+    await expect(bar).toBeVisible();
+    await page.waitForTimeout(200);
+    const box = (await bar.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(editorBox.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(editorBox.x + editorBox.width + 1);
+  }
+});
