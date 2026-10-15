@@ -18,6 +18,8 @@ export interface ToolbarProps {
   uploading?: boolean;
   /** 말풍선 툴바처럼 툴바 상자 폭이 내용에 맞춰질 때, 들어갈 수 있는 폭의 기준 요소 */
   boundary?: HTMLElement | null;
+  /** 링크·유튜브 입력 창이 열려 있는지 — 단축키로 열려도 더 보기 상자를 닫는다 */
+  popoverOpen?: boolean;
 }
 
 const FONT_SIZE_OPTIONS = ['10px', '11px', '12px', '14px', '16px', '18px', '21px', '24px', '36px', '48px', '60px', '72px'];
@@ -123,7 +125,7 @@ function ToolButton({
   );
 }
 
-export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors, uploading, boundary }: ToolbarProps) {
+export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors, uploading, boundary, popoverOpen }: ToolbarProps) {
   const [colorOpen, setColorOpen] = useState(false);
   const [paletteLeft, setPaletteLeft] = useState(0);
   const [fit, setFit] = useState(Number.POSITIVE_INFINITY);
@@ -215,10 +217,6 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       if (!(e instanceof RangeError)) throw e;
     }
   };
-  const openPopover = (kind: PopoverKind) => {
-    setMoreOpen(false);
-    onOpenPopover(kind);
-  };
   const insertOptions = [
     features.table && !state.isTable && { value: 'table', label: '표' },
     features.blocks && { value: 'hr', label: '구분선' },
@@ -239,7 +237,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     }
     if (value === 'table') chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (value === 'hr') chain().setHorizontalRule().run();
-    else if (value === 'youtube') openPopover('youtube');
+    else if (value === 'youtube') onOpenPopover('youtube');
     else if (value === 'image') onPickImage?.();
   };
   // 좁은 화면에서 툴바 상자 오른쪽 밖으로 나가지 않게 연 뒤 폭을 재서 당긴다
@@ -387,7 +385,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     features.link && {
       key: 'link',
       node: (
-        <ToolButton label="링크 연결" active={state.isLink} onClick={() => openPopover('link')}>
+        <ToolButton label="링크 연결" active={state.isLink} onClick={() => onOpenPopover('link')}>
           <Link />
         </ToolButton>
       ),
@@ -523,8 +521,8 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     target?.focus();
   }, [visibleCount]);
   useEffect(() => {
-    if (hidden.length === 0) setMoreOpen(false);
-  }, [hidden.length]);
+    if (hidden.length === 0 || popoverOpen) setMoreOpen(false);
+  }, [hidden.length, popoverOpen]);
   useEffect(() => {
     const box = boundary ?? wrapRef.current;
     const bar = barRef.current;

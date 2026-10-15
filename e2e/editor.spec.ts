@@ -394,3 +394,15 @@ test('더 보기 상자가 열린 채 링크 입력 창을 Esc 로 닫으면 입
   await page.keyboard.type('z');
   await expect(html(page)).toContainText('z');
 });
+
+test('더 보기 상자가 열린 채 단축키로 링크 입력 창을 열면 상자는 닫힌다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.locator('.ProseMirror p').click();
+  await page.getByRole('button', { name: '더 보기' }).click();
+  await page.locator('.ProseMirror').focus();
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.locator('.aikive-popover')).toBeVisible();
+  await expect(page.locator('.aikive-toolbar__more')).toBeHidden();
+});
