@@ -1,6 +1,6 @@
 {
   "name": "@studio-freewillusion/aikive-text-editor",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Rich text editor and viewer built on tiptap",
   "license": "MIT",
   "type": "module",

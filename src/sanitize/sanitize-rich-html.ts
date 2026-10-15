@@ -24,6 +24,9 @@ const BASE_ALLOWED_ATTRS = [
 // 서버 번들과 브라우저 번들에서 각각 한 번씩 정상 등록된다.
 let isHookRegistered = false;
 
+// 훅은 라이브러리 공용 인스턴스에 걸리므로, 쓰는 쪽이 같은 라이브러리를 직접 부를 때는 아무것도 하지 않는다
+let isPackageCall = false;
+
 // 이번 정화 호출에서 이미지·iframe 은 loading="lazy", 영상은 preload="none" 을 붙일지. sanitize 는 동기라 호출 동안만 켜 둔다.
 let isLazyMediaCall = false;
 
@@ -54,6 +57,7 @@ const ensureSecurityHook = () => {
     isHookRegistered = true;
 
     DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+        if (!isPackageCall) return;
         const el = node as Element;
         if (typeof el.getAttribute !== 'function') return;
 
@@ -97,6 +101,7 @@ export const sanitizeRichHtml = (html: string, options: SanitizeOptions = {}): s
     ensureSecurityHook();
     const { allowIframe = true, extraAttrs = [], lazyMedia = false, extraIframeHosts = [] } = options;
 
+    isPackageCall = true;
     isLazyMediaCall = lazyMedia;
     extraIframeHostsCall = new Set(extraIframeHosts);
     try {
@@ -105,6 +110,7 @@ export const sanitizeRichHtml = (html: string, options: SanitizeOptions = {}): s
             ADD_ATTR: [...BASE_ALLOWED_ATTRS, ...extraAttrs],
         });
     } finally {
+        isPackageCall = false;
         isLazyMediaCall = false;
         extraIframeHostsCall = new Set();
     }

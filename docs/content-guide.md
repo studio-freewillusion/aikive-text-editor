@@ -88,10 +88,14 @@ aikive-text-editor 로 저장하는 본문을 AI 가 직접 쓸 때 따르는 �
 
 ## 링크
 
-`http://`·`https://` 주소만 링크가 됩니다. 링크는 새 탭에서 열립니다(`target` 을 빼도 새 탭으로 저장됩니다).
+`http://`·`https://` 주소만 링크가 됩니다. 링크는 새 탭에서 열립니다(`target` 을 빼도 새 탭으로 저장됩니다). 같은 탭에서 열려면 `target="_self"` 를 씁니다.
 
 ```html
 <p>자세한 내용은 <a target="_blank" rel="noopener noreferrer" href="https://example.com/notice">공지</a>를 보세요.</p>
+```
+
+```html
+<p><a target="_self" rel="noopener noreferrer nofollow" href="https://example.com/notice">같은 탭에서 여는 링크</a></p>
 ```
 
 ## 표

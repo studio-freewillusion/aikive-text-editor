@@ -198,4 +198,20 @@ describe('AikiveTextEditor', () => {
     expect(out).toContain('src="https://www.youtube-nocookie.com/embed/VIDEO_ID"');
     expect(out).toContain('모르는 태그');
   });
+  it('빈 에디터의 스냅샷 html 은 빈 문자열이라 빈 탭 값과 맞는다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    render(<AikiveTextEditor ref={ref} initialContent="" />);
+    await waitFor(() => expect(ref.current?.takeSnapshot()).toBeTruthy());
+    expect(ref.current!.takeSnapshot()!.html).toBe('');
+  });
+
+  it('HTML 모드를 열었다가 고치지 않고 닫으면 onChange 를 부르지 않는다', async () => {
+    const onChange = vi.fn();
+    const ref = createRef<AikiveTextEditorHandle>();
+    render(<AikiveTextEditor ref={ref} initialContent="<p>a</p>" onChange={onChange} />);
+    await waitFor(() => expect(ref.current?.getHTML()).toBe('<p>a</p>'));
+    act(() => ref.current!.setSourceMode(true));
+    act(() => ref.current!.setSourceMode(false));
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

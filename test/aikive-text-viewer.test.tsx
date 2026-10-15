@@ -57,4 +57,10 @@ describe('AikiveTextViewer', () => {
     rerender(<AikiveTextViewer content={html} extraIframeHosts={['video.example.com']} />);
     expect(container.querySelector('iframe')).not.toBeNull();
   });
+  it('링크가 바깥 태그에 걸린 이미지도 클릭하면 확대하지 않는다', async () => {
+    const onClickImage = vi.fn();
+    render(<AikiveTextViewer content={'<p><a href="#x"><span><img src="https://cdn.example.com/a.png" alt="본문"></span></a></p>'} onClickImage={onClickImage} />);
+    await userEvent.setup().click(screen.getByRole('img', { name: '본문' }));
+    expect(onClickImage).not.toHaveBeenCalled();
+  });
 });

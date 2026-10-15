@@ -16,7 +16,8 @@ export function renderHtml(
 
       const { src } = el.attribs;
       // 링크가 걸린 이미지는 확대보다 링크 이동이 먼저다
-      const insideLink = (el.parent as Element | null)?.name === 'a';
+      let insideLink = false;
+      for (let p = el.parent as Element | null; p && !insideLink; p = p.parent as Element | null) insideLink = p.name === 'a';
       return (
         <img
           {...attributesToProps(el.attribs)}

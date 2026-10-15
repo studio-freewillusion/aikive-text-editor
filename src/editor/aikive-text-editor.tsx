@@ -43,6 +43,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   // 핸들은 다시 그려지기 전까지 옛 state 를 보므로, 같은 tick 에 이어 불러도 맞게 모드·소스 글은 ref 로 읽는다
   const sourceModeRef = useRef(false);
   const sourceTextRef = useRef('');
+  const sourceEntryRef = useRef('');
   const applySourceMode = (on: boolean) => {
     sourceModeRef.current = on;
     setSourceModeState(on);
@@ -90,8 +91,15 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     if (on) {
       editor.commands.blur();
       updateSourceText(editor.getHTML());
+      sourceEntryRef.current = sourceTextRef.current;
       applySourceMode(true);
       sourceModeChangeRef.current?.(true);
+      return;
+    }
+    // 고치지 않고 닫으면 다시 적용하지 않는다 — 다시 넣으면 정리된 HTML 로 onChange 가 나가 「수정됨」 이 된다
+    if (sourceTextRef.current === sourceEntryRef.current) {
+      applySourceMode(false);
+      sourceModeChangeRef.current?.(false);
       return;
     }
     try {
@@ -118,7 +126,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         editor.view.dispatch(editor.state.tr);
       },
       takeSnapshot: (): Snapshot | null =>
-        editor && !sourceModeRef.current ? { state: editor.state, html: editor.getHTML() } : null,
+        editor && !sourceModeRef.current ? { state: editor.state, html: htmlOf(editor) } : null,
       restoreSnapshot: (snapshot) => {
         // 에디터가 다시 만들어졌으면 예전 상태의 플러그인이 맞지 않아 되살리지 않는다
         if (!editor || snapshot.state.schema !== editor.schema) return false;
