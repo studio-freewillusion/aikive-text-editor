@@ -40,6 +40,11 @@
   color: var(--aikive-toolbar-fg);
 }
 
+/* 처음 뜬 말풍선은 항목 폭을 재기 전이라 한두 프레임 넓게 보이므로 잴 때까지 숨긴다 */
+.aikive-toolbar.is-measuring {
+  visibility: hidden;
+}
+
 /* 터치 기기 고정 툴바는 밀어서 넘긴다 — 가로 막대는 숨긴다 */
 .aikive-toolbar.is-scrollable {
   overflow-x: auto;

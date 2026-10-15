@@ -325,3 +325,39 @@ test('더 보기 상자의 Esc 는 상자만 닫고 바깥(다이얼로그 등)�
   expect(await page.evaluate(() => (window as unknown as { escSeen: number }).escSeen)).toBe(0);
   await expect(more).toBeFocused();
 });
+
+test('더 보기 상자는 칸이 넓어져 사라지면 닫히고, 다시 좁아져도 저절로 열리지 않는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  const setWidth = (w: number) => page.evaluate((w) => { document.querySelector<HTMLElement>('.aikive-text-editor')!.style.maxWidth = `${w}px`; }, w);
+  await setWidth(380);
+  const more = page.getByRole('button', { name: '더 보기' });
+  await more.click();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await setWidth(1000);
+  await expect(more).toHaveCount(0);
+  await setWidth(380);
+  await expect(more).toBeVisible();
+  await expect(page.locator('.aikive-toolbar__more')).toBeHidden();
+});
+
+test('칸이 좁아져 포커스 항목이 더 보기로 옮겨지면 포커스는 더 보기 버튼으로 간다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.getByRole('button', { name: 'HTML 모드' }).focus();
+  await page.evaluate(() => { document.querySelector<HTMLElement>('.aikive-text-editor')!.style.maxWidth = '380px'; });
+  await expect(page.getByRole('button', { name: '더 보기' })).toBeFocused();
+});
+
+test('더 보기 상자 안에서 링크 입력 창을 열면 상자는 닫힌다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.locator('.ProseMirror p').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.getByRole('button', { name: '더 보기' }).click();
+  const panel = page.locator('.aikive-toolbar__more');
+  await panel.getByRole('button', { name: '링크 연결' }).click();
+  await expect(page.locator('.aikive-popover')).toBeVisible();
+  await expect(panel).toBeHidden();
+});

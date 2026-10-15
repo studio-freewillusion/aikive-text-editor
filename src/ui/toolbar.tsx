@@ -95,6 +95,7 @@ function ToolButton({
   active,
   disabled,
   pressed,
+  expanded,
   onClick,
   children,
 }: {
@@ -102,6 +103,7 @@ function ToolButton({
   active?: boolean;
   disabled?: boolean;
   pressed?: boolean;
+  expanded?: boolean;
   onClick: () => void;
   children: ReactNode;
 }) {
@@ -111,6 +113,7 @@ function ToolButton({
       aria-label={label}
       title={label}
       aria-pressed={pressed}
+      aria-expanded={expanded}
       disabled={disabled}
       className={cx('aikive-toolbar__button', active && 'is-active')}
       onClick={onClick}
@@ -128,6 +131,8 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
   const [, setMeasureTick] = useState(0);
   const widthsRef = useRef(new Map<string, number>());
   const moreWidthRef = useRef(32);
+  const refocusKeyRef = useRef<string | null>(null);
+  const [measured, setMeasured] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const paletteRef = useRef<HTMLDivElement>(null);
@@ -210,6 +215,10 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       if (!(e instanceof RangeError)) throw e;
     }
   };
+  const openPopover = (kind: PopoverKind) => {
+    setMoreOpen(false);
+    onOpenPopover(kind);
+  };
   const insertOptions = [
     features.table && !state.isTable && { value: 'table', label: '표' },
     features.blocks && { value: 'hr', label: '구분선' },
@@ -230,7 +239,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     }
     if (value === 'table') chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (value === 'hr') chain().setHorizontalRule().run();
-    else if (value === 'youtube') onOpenPopover('youtube');
+    else if (value === 'youtube') openPopover('youtube');
     else if (value === 'image') onPickImage?.();
   };
   // 좁은 화면에서 툴바 상자 오른쪽 밖으로 나가지 않게 연 뒤 폭을 재서 당긴다
@@ -378,7 +387,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     features.link && {
       key: 'link',
       node: (
-        <ToolButton label="링크 연결" active={state.isLink} onClick={() => onOpenPopover('link')}>
+        <ToolButton label="링크 연결" active={state.isLink} onClick={() => openPopover('link')}>
           <Link />
         </ToolButton>
       ),
@@ -456,7 +465,8 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
   useLayoutEffect(() => {
     const bar = barRef.current;
     const box = boundary ?? wrapRef.current;
-    if (scrollable || !bar || !box) return;
+    // 숨은 말풍선은 DOM 에서 떨어져 있어 여백·간격이 0 으로 읽혀 개수를 잘못 센다
+    if (scrollable || !bar || !box || !bar.isConnected) return;
     const kids = Array.from(bar.children) as HTMLElement[];
     // offsetWidth 는 소수점을 버려 합이 모자라면 마지막 항목이 다음 줄로 밀린다
     const widthOfEl = (el: HTMLElement | undefined) => el?.getBoundingClientRect().width ?? 0;
@@ -489,8 +499,32 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
         next += 1;
       }
     }
-    if (next !== visibleCount) setFit(next);
+    if (next === visibleCount) {
+      if (!measured) setMeasured(true);
+      return;
+    }
+    // 항목이 막대와 상자 사이를 옮겨 가면 다시 그려져 포커스를 잃으므로 옮긴 뒤 되찾을 항목을 적어 둔다
+    const panelKids = Array.from(wrapRef.current?.querySelector('.aikive-toolbar__more')?.children ?? []);
+    const active = document.activeElement;
+    const focused =
+      shown.find((_, i) => kids[i]?.contains(active)) ?? hidden.find((_, i) => panelKids[i]?.contains(active));
+    if (focused) refocusKeyRef.current = focused.key;
+    setFit(next);
   });
+  useLayoutEffect(() => {
+    const key = refocusKeyRef.current;
+    if (!key) return;
+    refocusKeyRef.current = null;
+    const index = shown.findIndex((item) => item.key === key);
+    const target =
+      index >= 0
+        ? (barRef.current?.children[index] as HTMLElement | undefined)
+        : barRef.current?.querySelector<HTMLElement>('[aria-label="더 보기"]');
+    target?.focus();
+  }, [visibleCount]);
+  useEffect(() => {
+    if (hidden.length === 0) setMoreOpen(false);
+  }, [hidden.length]);
   useEffect(() => {
     const box = boundary ?? wrapRef.current;
     const bar = barRef.current;
@@ -526,7 +560,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     <div ref={wrapRef} className="aikive-toolbar-wrap">
       <div
         ref={barRef}
-        className={cx('aikive-toolbar', scrollable && 'is-scrollable', fade.start && 'is-fade-start', fade.end && 'is-fade-end')}
+        className={cx('aikive-toolbar', scrollable && 'is-scrollable', !scrollable && !measured && 'is-measuring', fade.start && 'is-fade-start', fade.end && 'is-fade-end')}
         role="toolbar"
         aria-label="서식"
         onScroll={
@@ -544,7 +578,7 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
         {hidden.length > 0 && (
           <ToolButton
             label="더 보기"
-            pressed={moreOpen}
+            expanded={moreOpen}
             onClick={() => {
               setColorOpen(false);
               setMoreOpen((v) => !v);
