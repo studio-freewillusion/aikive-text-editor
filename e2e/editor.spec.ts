@@ -265,3 +265,43 @@ test(`말풍선 툴바 폭이 바뀌면 위치를 다시 잡아 오른쪽 글에
   expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
 });
 }
+
+for (const [mode, width] of [['fixed', 380], ['bubble', 380], ['fixed', 480], ['bubble', 480]] as const) {
+  test(`좁은 에디터(${width}px)에서 ${mode === 'fixed' ? '고정' : '말풍선'} 툴바는 한 줄로 두고 넘치는 항목을 더 보기에 넣는다`, async ({ page }) => {
+    await page.setViewportSize({ width: 1300, height: 800 });
+    await page.goto(`/?toolbar=${mode}&content=` + encodeURIComponent('<p>좁은 칸 글자</p>'));
+    await page.addStyleTag({ content: `.aikive-text-editor { max-width: ${width}px; }` });
+    const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+    const bar = page.getByRole('toolbar', { name: '서식' });
+    await page.locator('.ProseMirror p').click();
+    await page.keyboard.press('End');
+    await page.keyboard.type('x');
+    await expect(html(page)).toHaveText('<p>좁은 칸 글자x</p>');
+    await page.waitForTimeout(600);
+    if (mode === 'bubble') await page.keyboard.press('ControlOrMeta+a');
+    await expect(bar).toBeVisible();
+    const more = bar.getByRole('button', { name: '더 보기' });
+    await expect(more).toBeVisible();
+    await page.waitForTimeout(300);
+    const box = (await bar.boundingBox())!;
+    expect(box.height).toBeLessThan(45);
+    expect(box.x + box.width).toBeLessThanOrEqual(editorBox.x + editorBox.width + 1);
+    // 오른쪽 끝 항목부터 옮겨져 되돌리기 줄은 더 보기 안에 있다
+    await expect(bar.getByRole('button', { name: '다시 하기' })).toHaveCount(0);
+    await more.click();
+    const panel = page.locator('.aikive-toolbar__more');
+    await expect(panel).toBeVisible();
+    await panel.getByRole('button', { name: '되돌리기' }).click();
+    await expect(html(page)).toHaveText('<p>좁은 칸 글자</p>');
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+  });
+}
+
+test('넓은 에디터에서는 더 보기 없이 모든 항목이 한 줄에 있다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>넓은 칸</p>');
+  const bar = page.getByRole('toolbar', { name: '서식' });
+  await expect(bar.getByRole('button', { name: '다시 하기' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: '더 보기' })).toHaveCount(0);
+});

@@ -264,6 +264,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     [editor, sourceMode, sourceText],
   );
 
+  const useBubble = toolbar === 'bubble' && !coarsePointer && !sourceMode;
   const toolbarNode = editor ? (
     <Toolbar
       editor={editor}
@@ -275,9 +276,9 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       colors={colors}
       uploading={uploading}
       scrollable={coarsePointer}
+      boundary={useBubble ? rootEl : null}
     />
   ) : null;
-  const useBubble = toolbar === 'bubble' && !coarsePointer && !sourceMode;
   // tiptap 은 툴바 내용이 바뀌기 전 폭으로 위치를 재서, 표 편집이 빠지는 등 폭이 바뀌면 글자 쪽에서 떨어진다 — 폭이 바뀔 때 다시 잰다
   useEffect(() => {
     const el = bubbleRef.current;

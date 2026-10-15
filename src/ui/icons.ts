@@ -5,6 +5,7 @@ export {
   AlignRight,
   Bold,
   Code2,
+  Ellipsis,
   GripVertical,
   Heading1,
   Heading2,

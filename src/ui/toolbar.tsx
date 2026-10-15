@@ -1,10 +1,10 @@
 import { useEditorState, type Editor } from '@tiptap/react';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactElement, type ReactNode } from 'react';
 import type { ResolvedPos } from '@tiptap/pm/model';
 import { NodeSelection, Selection, TextSelection } from '@tiptap/pm/state';
 import type { ColorOption, Features } from '../editor/types';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
-import { Bold, Code2, Italic, Link, Palette, Redo2, Strikethrough, Underline, Undo2 } from './icons';
+import { Bold, Code2, Ellipsis, Italic, Link, Palette, Redo2, Strikethrough, Underline, Undo2 } from './icons';
 
 export interface ToolbarProps {
   editor: Editor;
@@ -16,6 +16,8 @@ export interface ToolbarProps {
   scrollable?: boolean;
   colors?: ColorOption[];
   uploading?: boolean;
+  /** 말풍선 툴바처럼 툴바 상자 폭이 내용에 맞춰질 때, 들어갈 수 있는 폭의 기준 요소 */
+  boundary?: HTMLElement | null;
 }
 
 const FONT_SIZE_OPTIONS = ['10px', '11px', '12px', '14px', '16px', '18px', '21px', '24px', '36px', '48px', '60px', '72px'];
@@ -118,9 +120,14 @@ function ToolButton({
   );
 }
 
-export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors, uploading }: ToolbarProps) {
+export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors, uploading, boundary }: ToolbarProps) {
   const [colorOpen, setColorOpen] = useState(false);
   const [paletteLeft, setPaletteLeft] = useState(0);
+  const [fit, setFit] = useState(Number.POSITIVE_INFINITY);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [, setMeasureTick] = useState(0);
+  const widthsRef = useRef(new Map<string, number>());
+  const moreWidthRef = useRef(32);
   const wrapRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const paletteRef = useRef<HTMLDivElement>(null);
@@ -238,8 +245,277 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
   const toggleColor = (e: MouseEvent<HTMLButtonElement>) => {
     const wrap = wrapRef.current;
     if (wrap) setPaletteLeft(e.currentTarget.getBoundingClientRect().left - wrap.getBoundingClientRect().left);
+    setMoreOpen(false);
     setColorOpen((v) => !v);
   };
+
+  const items = [
+    blockTypes.length > 1 && {
+      key: 'blockType',
+      node: (
+        <select
+          aria-label="문단 종류"
+          className="aikive-toolbar__select"
+          value={state.blockType}
+          onChange={(e) => setBlockType(e.target.value as BlockType)}
+        >
+          {state.blockType === '' && (
+            <option value="" disabled hidden>
+              여러 종류
+            </option>
+          )}
+          {blockTypes.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    {
+      key: 'bold',
+      node: (
+        <ToolButton label="굵게" active={state.isBold} onClick={() => chain().toggleBold().run()}>
+          <Bold />
+        </ToolButton>
+      ),
+    },
+    {
+      key: 'italic',
+      node: (
+        <ToolButton label="기울임꼴" active={state.isItalic} onClick={() => chain().toggleItalic().run()}>
+          <Italic />
+        </ToolButton>
+      ),
+    },
+    {
+      key: 'underline',
+      node: (
+        <ToolButton label="밑줄" active={state.isUnderline} onClick={() => chain().toggleUnderline().run()}>
+          <Underline />
+        </ToolButton>
+      ),
+    },
+    {
+      key: 'strike',
+      node: (
+        <ToolButton label="취소선" active={state.isStrike} onClick={() => chain().toggleStrike().run()}>
+          <Strikethrough />
+        </ToolButton>
+      ),
+    },
+    features.color && {
+      key: 'color',
+      node: (
+        <button
+          type="button"
+          aria-label="글자색"
+          title="글자색"
+          aria-pressed={colorOpen}
+          className="aikive-toolbar__button"
+          onClick={toggleColor}
+        >
+          <Palette />
+        </button>
+      ),
+    },
+    features.fontSize && {
+      key: 'fontSize',
+      node: (
+        <select
+          aria-label="글자 크기"
+          className="aikive-toolbar__select"
+          value={state.fontSize}
+          onChange={(e) => (e.target.value ? chain().setFontSize(e.target.value).run() : chain().unsetFontSize().run())}
+        >
+          <option value="">크기</option>
+          {FONT_SIZE_OPTIONS.map((size) => (
+            <option key={size} value={size}>
+              {size.replace('px', '')}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    features.lineHeight && {
+      key: 'lineHeight',
+      node: (
+        <select
+          aria-label="줄간격"
+          className="aikive-toolbar__select"
+          value={state.lineHeight}
+          onChange={(e) =>
+            e.target.value ? chain().setLineHeight(e.target.value).run() : chain().unsetLineHeight().run()
+          }
+        >
+          <option value="">줄간격</option>
+          {LINE_HEIGHT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    features.align && {
+      key: 'align',
+      node: (
+        <select
+          aria-label="정렬"
+          className="aikive-toolbar__select"
+          value={state.align}
+          onChange={(e) => (e.target.value ? chain().setTextAlign(e.target.value).run() : chain().unsetTextAlign().run())}
+        >
+          <option value="">정렬</option>
+          {ALIGN_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    features.link && {
+      key: 'link',
+      node: (
+        <ToolButton label="링크 연결" active={state.isLink} onClick={() => onOpenPopover('link')}>
+          <Link />
+        </ToolButton>
+      ),
+    },
+    insertOptions.length > 0 && {
+      key: 'insert',
+      node: (
+        <select
+          aria-label="넣기"
+          className="aikive-toolbar__select"
+          value=""
+          onChange={(e) => {
+            if (e.target.value) insert(e.target.value);
+          }}
+        >
+          <option value="">넣기</option>
+          {insertOptions.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    features.table && state.isTable && {
+      key: 'table',
+      node: (
+        <select
+          aria-label="표 편집"
+          className="aikive-toolbar__select"
+          value=""
+          onChange={(e) => {
+            const action = e.target.value as (typeof TABLE_ACTIONS)[number]['value'] | '';
+            if (action) chain()[action]().run();
+          }}
+        >
+          <option value="">표 편집</option>
+          {TABLE_ACTIONS.map((a) => (
+            <option key={a.value} value={a.value}>
+              {a.label}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    features.sourceMode && {
+      key: 'source',
+      node: (
+        <ToolButton label="HTML 모드" pressed={sourceMode} disabled={uploading && !sourceMode} onClick={onToggleSource}>
+          <Code2 />
+        </ToolButton>
+      ),
+    },
+    features.undoRedo && {
+      key: 'undo',
+      node: (
+        <ToolButton label="되돌리기" disabled={!state.canUndo} onClick={() => chain().undo().run()}>
+          <Undo2 />
+        </ToolButton>
+      ),
+    },
+    features.undoRedo && {
+      key: 'redo',
+      node: (
+        <ToolButton label="다시 하기" disabled={!state.canRedo} onClick={() => chain().redo().run()}>
+          <Redo2 />
+        </ToolButton>
+      ),
+    },
+  ].filter((item): item is { key: string; node: ReactElement } => !!item);
+  const visibleCount = scrollable ? items.length : Math.min(fit, items.length);
+  const shown = items.slice(0, visibleCount);
+  const hidden = items.slice(visibleCount);
+  // 좁은 칸에서 두 줄로 늘어나지 않게, 들어가지 않는 항목은 오른쪽 끝부터 「더 보기」 로 옮긴다(터치 기기는 밀어서 넘기므로 제외)
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    const box = boundary ?? wrapRef.current;
+    if (scrollable || !bar || !box) return;
+    const kids = Array.from(bar.children) as HTMLElement[];
+    // offsetWidth 는 소수점을 버려 합이 모자라면 마지막 항목이 다음 줄로 밀린다
+    const widthOfEl = (el: HTMLElement | undefined) => el?.getBoundingClientRect().width ?? 0;
+    shown.forEach((item, i) => {
+      const w = widthOfEl(kids[i]);
+      if (w) widthsRef.current.set(item.key, w);
+    });
+    const moreW = hidden.length > 0 ? widthOfEl(kids[shown.length]) : 0;
+    if (moreW) moreWidthRef.current = moreW;
+    const style = getComputedStyle(bar);
+    const px = (v: string) => parseFloat(v) || 0;
+    const gap = px(style.columnGap);
+    const avail =
+      box.getBoundingClientRect().width -
+      px(style.paddingLeft) -
+      px(style.paddingRight) -
+      px(style.borderLeftWidth) -
+      px(style.borderRightWidth) -
+      1;
+    if (avail <= 0) return;
+    // 아직 한 번도 그려지지 않은 항목(표 편집 등)은 버튼 하나 폭으로 어림한다
+    const widthOf = (key: string) => widthsRef.current.get(key) ?? moreWidthRef.current;
+    const total = items.reduce((sum, item, i) => sum + widthOf(item.key) + (i > 0 ? gap : 0), 0);
+    let next = items.length;
+    if (total > avail) {
+      next = 0;
+      let used = moreWidthRef.current;
+      while (next < items.length && used + gap + widthOf(items[next].key) <= avail) {
+        used += gap + widthOf(items[next].key);
+        next += 1;
+      }
+    }
+    if (next !== visibleCount) setFit(next);
+  });
+  useEffect(() => {
+    const box = boundary ?? wrapRef.current;
+    const bar = barRef.current;
+    if (scrollable || !box || !bar || typeof ResizeObserver === 'undefined') return;
+    // 말풍선은 숨어 있는 동안 폭이 0 이라 다시 보일 때(툴바 크기 변화) 다시 잰다
+    const observer = new ResizeObserver(() => setMeasureTick((t) => t + 1));
+    observer.observe(box);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [boundary, scrollable]);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setMoreOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMoreOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [moreOpen]);
 
   return (
     <div ref={wrapRef} className="aikive-toolbar-wrap">
@@ -257,152 +533,29 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
             : undefined
         }
       >
-        {blockTypes.length > 1 && (
-          <select
-            aria-label="문단 종류"
-            className="aikive-toolbar__select"
-            value={state.blockType}
-            onChange={(e) => setBlockType(e.target.value as BlockType)}
-          >
-            {state.blockType === '' && (
-              <option value="" disabled hidden>
-                여러 종류
-              </option>
-            )}
-            {blockTypes.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        )}
-        <ToolButton label="굵게" active={state.isBold} onClick={() => chain().toggleBold().run()}>
-          <Bold />
-        </ToolButton>
-        <ToolButton label="기울임꼴" active={state.isItalic} onClick={() => chain().toggleItalic().run()}>
-          <Italic />
-        </ToolButton>
-        <ToolButton label="밑줄" active={state.isUnderline} onClick={() => chain().toggleUnderline().run()}>
-          <Underline />
-        </ToolButton>
-        <ToolButton label="취소선" active={state.isStrike} onClick={() => chain().toggleStrike().run()}>
-          <Strikethrough />
-        </ToolButton>
-        {features.color && (
-          <button
-            type="button"
-            aria-label="글자색"
-            title="글자색"
-            aria-pressed={colorOpen}
-            className="aikive-toolbar__button"
-            onClick={toggleColor}
-          >
-            <Palette />
-          </button>
-        )}
-        {features.fontSize && (
-          <select
-            aria-label="글자 크기"
-            className="aikive-toolbar__select"
-            value={state.fontSize}
-            onChange={(e) => (e.target.value ? chain().setFontSize(e.target.value).run() : chain().unsetFontSize().run())}
-          >
-            <option value="">크기</option>
-            {FONT_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>
-                {size.replace('px', '')}
-              </option>
-            ))}
-          </select>
-        )}
-        {features.lineHeight && (
-          <select
-            aria-label="줄간격"
-            className="aikive-toolbar__select"
-            value={state.lineHeight}
-            onChange={(e) =>
-              e.target.value ? chain().setLineHeight(e.target.value).run() : chain().unsetLineHeight().run()
-            }
-          >
-            <option value="">줄간격</option>
-            {LINE_HEIGHT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        )}
-        {features.align && (
-          <select
-            aria-label="정렬"
-            className="aikive-toolbar__select"
-            value={state.align}
-            onChange={(e) => (e.target.value ? chain().setTextAlign(e.target.value).run() : chain().unsetTextAlign().run())}
-          >
-            <option value="">정렬</option>
-            {ALIGN_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        )}
-        {features.link && (
-          <ToolButton label="링크 연결" active={state.isLink} onClick={() => onOpenPopover('link')}>
-            <Link />
-          </ToolButton>
-        )}
-        {insertOptions.length > 0 && (
-          <select
-            aria-label="넣기"
-            className="aikive-toolbar__select"
-            value=""
-            onChange={(e) => {
-              if (e.target.value) insert(e.target.value);
+        {shown.map((item) => (
+          <Fragment key={item.key}>{item.node}</Fragment>
+        ))}
+        {hidden.length > 0 && (
+          <ToolButton
+            label="더 보기"
+            pressed={moreOpen}
+            onClick={() => {
+              setColorOpen(false);
+              setMoreOpen((v) => !v);
             }}
           >
-            <option value="">넣기</option>
-            {insertOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        )}
-        {features.table && state.isTable && (
-          <select
-            aria-label="표 편집"
-            className="aikive-toolbar__select"
-            value=""
-            onChange={(e) => {
-              const action = e.target.value as (typeof TABLE_ACTIONS)[number]['value'] | '';
-              if (action) chain()[action]().run();
-            }}
-          >
-            <option value="">표 편집</option>
-            {TABLE_ACTIONS.map((a) => (
-              <option key={a.value} value={a.value}>
-                {a.label}
-              </option>
-            ))}
-          </select>
-        )}
-        {features.sourceMode && (
-          <ToolButton label="HTML 모드" pressed={sourceMode} disabled={uploading && !sourceMode} onClick={onToggleSource}>
-            <Code2 />
+            <Ellipsis />
           </ToolButton>
-        )}
-        {features.undoRedo && (
-          <>
-            <ToolButton label="되돌리기" disabled={!state.canUndo} onClick={() => chain().undo().run()}>
-              <Undo2 />
-            </ToolButton>
-            <ToolButton label="다시 하기" disabled={!state.canRedo} onClick={() => chain().redo().run()}>
-              <Redo2 />
-            </ToolButton>
-          </>
         )}
       </div>
+      {hidden.length > 0 && (
+        <div className="aikive-toolbar__more" hidden={!moreOpen}>
+          {hidden.map((item) => (
+            <Fragment key={item.key}>{item.node}</Fragment>
+          ))}
+        </div>
+      )}
       {features.color && (
         <div ref={paletteRef} className="aikive-toolbar__palette" hidden={!colorOpen} style={{ left: paletteLeft }}>
           <button

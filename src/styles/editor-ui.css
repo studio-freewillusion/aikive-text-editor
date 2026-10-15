@@ -40,11 +40,6 @@
   color: var(--aikive-toolbar-fg);
 }
 
-/* 좁은 칸의 고정 툴바는 칸 밖으로 넘치지 않게 줄바꿈한다 */
-.aikive-toolbar:not(.is-scrollable) {
-  flex-wrap: wrap;
-}
-
 /* 터치 기기 고정 툴바는 밀어서 넘긴다 — 가로 막대는 숨긴다 */
 .aikive-toolbar.is-scrollable {
   overflow-x: auto;
@@ -128,6 +123,28 @@
 
 .aikive-toolbar-wrap {
   position: relative;
+}
+
+/* 들어가지 않는 항목을 담는 「더 보기」 상자 — 툴바 상자 오른쪽 끝에 맞춘다 */
+.aikive-toolbar__more {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  padding: 0.2rem;
+  border: 1px solid var(--aikive-toolbar-border);
+  border-radius: 0.5rem;
+  background-color: var(--aikive-toolbar-bg);
+  color: var(--aikive-toolbar-fg);
+}
+
+.aikive-toolbar__more[hidden] {
+  display: none;
 }
 
 .aikive-toolbar__palette {

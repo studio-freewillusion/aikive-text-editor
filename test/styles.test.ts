@@ -17,8 +17,9 @@ describe('styles.css', () => {
     expect(css).toMatch(/\.tiptap pre,\s*\.tiptap \.tableWrapper\s*\{[^}]*scrollbar-color: transparent transparent/);
     expect(css).toMatch(/\.tiptap pre:hover[^{]*\{[^}]*scrollbar-color: var\(--aikive-text-scrollbar\) transparent/);
     expect(css).toContain('--aikive-text-scrollbar: rgba(255, 255, 255, 0.42)');
-    // 좁은 칸의 고정 툴바는 넘치지 않게 줄바꿈한다(터치 기기는 밀어서 넘김)
-    expect(css).toMatch(/\.aikive-toolbar:not\(\.is-scrollable\)\s*\{[^}]*flex-wrap: wrap/);
+    // 좁은 칸의 툴바는 줄바꿈하지 않는다 — 들어가지 않는 항목은 「더 보기」 로 옮긴다(터치 기기는 밀어서 넘김)
+    expect(css).not.toMatch(/\.aikive-toolbar(:not\([^)]*\))?\s*\{[^}]*flex-wrap: wrap/);
+    expect(css).toMatch(/\.aikive-toolbar__more\s*\{[^}]*position: absolute/);
     // 터치 기기 고정 툴바는 밀어서 넘기므로 가로 막대를 숨긴다
     expect(css).toMatch(/\.aikive-toolbar\.is-scrollable\s*\{[^}]*scrollbar-width: none/);
     expect(css).toMatch(/\.aikive-toolbar\.is-scrollable::-webkit-scrollbar\s*\{[^}]*display: none/);
