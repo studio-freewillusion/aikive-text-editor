@@ -92,17 +92,17 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 
 | 키 | 버튼 |
 | --- | --- |
-| `heading` | 제목 1~3 |
+| `heading` | 「문단 종류」의 제목 1~3 |
 | `fontSize` | 글자 크기 |
 | `color` | 글자색 |
 | `lineHeight` | 줄간격 |
-| `align` | 정렬 |
-| `table` | 표 넣기·편집 |
-| `image` | 이미지 넣기(`onUploadImage` 가 있을 때) |
+| `align` | 「정렬」 선택 |
+| `table` | 「넣기」의 표, 표 안에서 「표 편집」 |
+| `image` | 「넣기」의 이미지(`onUploadImage` 가 있을 때) |
 | `link` | 링크(Ctrl/⌘+K) |
-| `list` | 글머리 목록·번호 목록 |
-| `blocks` | 「블록」 선택 — 인용·구분선·코드 블록 |
-| `youtube` | 유튜브 넣기 |
+| `list` | 「문단 종류」의 글머리·번호 목록 |
+| `blocks` | 「문단 종류」의 인용·코드 블록, 「넣기」의 구분선 |
+| `youtube` | 「넣기」의 유튜브 |
 | `sourceMode` | HTML 모드 |
 | `undoRedo` | 되돌리기·다시 하기 |
 
@@ -132,6 +132,9 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `--aikive-text-link` | `#46add4` |
 | `--aikive-text-scrollbar` | `rgba(255, 255, 255, 0.42)` |
 | `--aikive-text-error` | `#f96960` |
+| `--aikive-quote-bg` | `#28282b` |
+| `--aikive-quote-border` | `#525259` |
+| `--aikive-text-font` | `Pretendard, "Pretendard Variable", …, sans-serif` (글꼴 파일은 쓰는 쪽에서 불러옵니다) |
 | `--aikive-toolbar-bg` | `#28282b` |
 | `--aikive-toolbar-fg` | `#ebebeb` |
 | `--aikive-toolbar-border` | `#525259` |

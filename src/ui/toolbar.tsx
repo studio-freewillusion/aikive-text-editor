@@ -1,30 +1,10 @@
 import { useEditorState, type Editor } from '@tiptap/react';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import type { ResolvedPos } from '@tiptap/pm/model';
+import { NodeSelection, Selection, TextSelection } from '@tiptap/pm/state';
 import type { ColorOption, Features } from '../editor/types';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
-import {
-  AlignCenter,
-  AlignJustify,
-  AlignLeft,
-  AlignRight,
-  Bold,
-  Code2,
-  Heading1,
-  Heading2,
-  Heading3,
-  ImageIcon,
-  Italic,
-  Link,
-  List,
-  ListOrdered,
-  Palette,
-  Redo2,
-  Strikethrough,
-  Table2,
-  Underline,
-  Undo2,
-  Youtube,
-} from './icons';
+import { Bold, Code2, Italic, Link, Palette, Redo2, Strikethrough, Underline, Undo2 } from './icons';
 
 export interface ToolbarProps {
   editor: Editor;
@@ -58,10 +38,39 @@ const COLOR_OPTIONS = [
   { label: '보라', value: '#7c3aed' },
 ];
 
-const BLOCK_ACTIONS = [
-  { value: 'toggleBlockquote', label: '인용' },
-  { value: 'setHorizontalRule', label: '구분선' },
-  { value: 'toggleCodeBlock', label: '코드 블록' },
+// 말풍선 툴바가 본문 폭 안에 들어가도록 블록 종류·정렬·넣기를 선택 상자 하나씩으로 묶었다
+type BlockType = 'paragraph' | 'h1' | 'h2' | 'h3' | 'bullet' | 'ordered' | 'quote' | 'code';
+
+const BLOCK_TYPES: Array<{ value: BlockType; label: string; feature: 'heading' | 'list' | 'blocks' | null }> = [
+  { value: 'paragraph', label: '본문', feature: null },
+  { value: 'h1', label: '제목 1', feature: 'heading' },
+  { value: 'h2', label: '제목 2', feature: 'heading' },
+  { value: 'h3', label: '제목 3', feature: 'heading' },
+  { value: 'bullet', label: '글머리 목록', feature: 'list' },
+  { value: 'ordered', label: '번호 목록', feature: 'list' },
+  { value: 'quote', label: '인용', feature: 'blocks' },
+  { value: 'code', label: '코드 블록', feature: 'blocks' },
+];
+
+// 바깥 목록이 아니라 커서에 가장 가까운 조상으로 판정해야 글머리 목록 안 번호 하위 목록을 번호로 본다
+function innermostBlockType($pos: ResolvedPos): BlockType {
+  for (let depth = $pos.depth; depth > 0; depth -= 1) {
+    const node = $pos.node(depth);
+    const name = node.type.name;
+    if (name === 'codeBlock') return 'code';
+    if (name === 'heading') return `h${node.attrs.level as 1 | 2 | 3}`;
+    if (name === 'bulletList') return 'bullet';
+    if (name === 'orderedList') return 'ordered';
+    if (name === 'blockquote') return 'quote';
+  }
+  return 'paragraph';
+}
+
+const ALIGN_OPTIONS = [
+  { value: 'left', label: '왼쪽' },
+  { value: 'center', label: '가운데' },
+  { value: 'right', label: '오른쪽' },
+  { value: 'justify', label: '양쪽' },
 ] as const;
 
 // 표 안에 커서가 있을 때만 뜨는 편집 목록 — 말풍선 메뉴가 좁아 select 하나로 묶었다
@@ -111,7 +120,10 @@ function ToolButton({
 
 export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors, uploading }: ToolbarProps) {
   const [colorOpen, setColorOpen] = useState(false);
+  const [paletteLeft, setPaletteLeft] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const paletteRef = useRef<HTMLDivElement>(null);
   const [fade, setFade] = useState({ start: false, end: false });
   // 밀어서 넘기는 툴바는 막대를 숨기므로 더 넘길 쪽 끝을 흐려 버튼이 더 있음을 알린다
   const updateFade = useCallback(() => {
@@ -137,180 +149,227 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
       isItalic: ed.isActive('italic'),
       isStrike: ed.isActive('strike'),
       isUnderline: ed.isActive('underline'),
-      isHeading1: ed.isActive('heading', { level: 1 }),
-      isHeading2: ed.isActive('heading', { level: 2 }),
-      isHeading3: ed.isActive('heading', { level: 3 }),
+      blockType: ((): BlockType | '' => {
+        const { doc, selection } = ed.state;
+        const types = new Set<BlockType>();
+        // 양 끝만 보면 전체 선택이나 가운데 블록만 다른 선택을 한 종류로 잘못 본다(표 칸 여러 개는 칸마다 범위가 따로다)
+        for (const range of selection.ranges) {
+          doc.nodesBetween(range.$from.pos, range.$to.pos, (node, pos) => {
+            if (types.size > 1) return false;
+            if (!node.isTextblock) return true;
+            types.add(innermostBlockType(doc.resolve(pos + 1)));
+            return false;
+          });
+        }
+        if (types.size === 0) return innermostBlockType(selection.$from);
+        // 섞인 선택을 「본문」 으로 보이면 본문을 다시 골라도 change 가 안 나 바꿀 수 없으므로 비워 둔다
+        return types.size === 1 ? [...types][0] : '';
+      })(),
+      align: ALIGN_OPTIONS.find((o) => ed.isActive({ textAlign: o.value }))?.value ?? '',
       canUndo: ed.can().chain().undo().run(),
       canRedo: ed.can().chain().redo().run(),
-      isLeft: ed.isActive({ textAlign: 'left' }),
-      isCenter: ed.isActive({ textAlign: 'center' }),
-      isRight: ed.isActive({ textAlign: 'right' }),
-      isJustify: ed.isActive({ textAlign: 'justify' }),
       isLink: ed.isActive('link') || (ed.isActive('image') && !!ed.getAttributes('image').href),
       isTable: ed.isActive('table'),
-      isBulletList: ed.isActive('bulletList'),
-      isOrderedList: ed.isActive('orderedList'),
       fontSize: (ed.getAttributes('textStyle').fontSize as string | undefined) ?? '',
       lineHeight: (ed.getAttributes('textStyle').lineHeight as string | undefined) ?? '',
     }),
   });
 
   const chain = () => editor.chain().focus();
+  const blockTypes = BLOCK_TYPES.filter((t) => t.feature === null || features[t.feature]);
+  const setBlockType = (value: BlockType) => {
+    const isList = (t: BlockType) => t === 'bullet' || t === 'ordered';
+    const { selection, doc } = editor.state;
+    let hasCode = selection.$from.parent.type.name === 'codeBlock';
+    doc.nodesBetween(selection.from, selection.to, (node) => {
+      if (node.type.name === 'codeBlock') hasCode = true;
+    });
+    // 양 끝이 목록이면 그 자리에서 종류만 바꿔야 목록이 쪼개지거나 하위 목록 들여쓰기가 풀리지 않는다(코드 블록이 끼면 아래 경로로 줄바꿈을 지킨다)
+    if (!hasCode && isList(value) && isList(innermostBlockType(selection.$from)) && isList(innermostBlockType(selection.$to))) {
+      (value === 'bullet' ? chain().toggleBulletList() : chain().toggleOrderedList()).run();
+      return;
+    }
+    // 깊은 중첩 목록 등 바꿀 수 없는 구조면 ProseMirror 가 적용 전에 RangeError 를 던진다 — 본문은 그대로라 조용히 둔다
+    try {
+      // 코드 블록은 먼저 문단으로 바꿔야 줄바꿈이 <br> 로 남는다(clearNodes 만 거치면 줄바꿈 글자가 사라짐)
+      const c = hasCode ? chain().setParagraph().clearNodes() : chain().clearNodes();
+      if (value === 'h1' || value === 'h2' || value === 'h3') c.setHeading({ level: Number(value[1]) as 1 | 2 | 3 });
+      else if (value === 'bullet') c.toggleBulletList();
+      else if (value === 'ordered') c.toggleOrderedList();
+      else if (value === 'quote') c.setBlockquote();
+      else if (value === 'code') c.setCodeBlock();
+      c.run();
+    } catch (e) {
+      if (!(e instanceof RangeError)) throw e;
+    }
+  };
+  const insertOptions = [
+    features.table && !state.isTable && { value: 'table', label: '표' },
+    features.blocks && { value: 'hr', label: '구분선' },
+    features.youtube && { value: 'youtube', label: '유튜브' },
+    features.image && onPickImage && { value: 'image', label: '이미지' },
+  ].filter((o): o is { value: string; label: string } => !!o);
+  const insert = (value: string) => {
+    // 고른 채 넣으면 고른 글자를 덮어쓴다(말풍선 툴바는 늘 고른 상태) — 선택 끝에 넣는다
+    const { selection } = editor.state;
+    if (selection instanceof TextSelection) {
+      if (!selection.empty) editor.commands.setTextSelection(selection.to);
+    } else {
+      // 이미지·표 칸 선택의 끝은 글자 자리가 아니라 그대로 커서를 두면 ProseMirror 가 경고한다 — 가장 가까운 글자 자리로 옮긴다
+      const $end = selection.ranges[selection.ranges.length - 1].$to;
+      const forward = selection instanceof NodeSelection;
+      const target = Selection.findFrom($end, forward ? 1 : -1, true) ?? Selection.findFrom($end, forward ? -1 : 1, true);
+      if (target) editor.view.dispatch(editor.state.tr.setSelection(target));
+    }
+    if (value === 'table') chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    else if (value === 'hr') chain().setHorizontalRule().run();
+    else if (value === 'youtube') onOpenPopover('youtube');
+    else if (value === 'image') onPickImage?.();
+  };
+  // 좁은 화면에서 툴바 상자 오른쪽 밖으로 나가지 않게 연 뒤 폭을 재서 당긴다
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    const palette = paletteRef.current;
+    if (!colorOpen || !wrap || !palette) return;
+    const max = wrap.clientWidth - palette.offsetWidth;
+    setPaletteLeft((left) => Math.max(0, Math.min(left, max)));
+  }, [colorOpen]);
+  // 팔레트는 밀어서 넘기는 툴바(overflow) 밖에 그려야 잘리지 않아 버튼 위치를 재서 맞춘다
+  const toggleColor = (e: MouseEvent<HTMLButtonElement>) => {
+    const wrap = wrapRef.current;
+    if (wrap) setPaletteLeft(e.currentTarget.getBoundingClientRect().left - wrap.getBoundingClientRect().left);
+    setColorOpen((v) => !v);
+  };
 
   return (
-    <div
-      ref={barRef}
-      className={cx('aikive-toolbar', scrollable && 'is-scrollable', fade.start && 'is-fade-start', fade.end && 'is-fade-end')}
-      role="toolbar"
-      aria-label="서식"
-      onScroll={scrollable ? updateFade : undefined}
-    >
-      {features.heading && (
-        <>
-          <ToolButton label="제목 1" active={state.isHeading1} onClick={() => chain().toggleHeading({ level: 1 }).run()}>
-            <Heading1 />
-          </ToolButton>
-          <ToolButton label="제목 2" active={state.isHeading2} onClick={() => chain().toggleHeading({ level: 2 }).run()}>
-            <Heading2 />
-          </ToolButton>
-          <ToolButton label="제목 3" active={state.isHeading3} onClick={() => chain().toggleHeading({ level: 3 }).run()}>
-            <Heading3 />
-          </ToolButton>
-        </>
-      )}
-      <ToolButton label="굵게" active={state.isBold} onClick={() => chain().toggleBold().run()}>
-        <Bold />
-      </ToolButton>
-      <ToolButton label="기울임꼴" active={state.isItalic} onClick={() => chain().toggleItalic().run()}>
-        <Italic />
-      </ToolButton>
-      <ToolButton label="밑줄" active={state.isUnderline} onClick={() => chain().toggleUnderline().run()}>
-        <Underline />
-      </ToolButton>
-      <ToolButton label="취소선" active={state.isStrike} onClick={() => chain().toggleStrike().run()}>
-        <Strikethrough />
-      </ToolButton>
-      {features.color && (
-        <div className="aikive-toolbar__color">
-          <ToolButton label="글자색" pressed={colorOpen} onClick={() => setColorOpen((v) => !v)}>
-            <Palette />
-          </ToolButton>
-          <div className="aikive-toolbar__palette" hidden={!colorOpen}>
-            <button
-              type="button"
-              className="aikive-toolbar__swatch is-reset"
-              aria-label="글자색 기본"
-              onClick={() => chain().unsetColor().run()}
-            >
-              기본
-            </button>
-            {(colors ?? COLOR_OPTIONS).map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                className="aikive-toolbar__swatch"
-                aria-label={`글자색 ${c.label}`}
-                title={c.label}
-                style={{ backgroundColor: c.value }}
-                onClick={() => chain().setColor(c.value).run()}
-              />
+    <div ref={wrapRef} className="aikive-toolbar-wrap">
+      <div
+        ref={barRef}
+        className={cx('aikive-toolbar', scrollable && 'is-scrollable', fade.start && 'is-fade-start', fade.end && 'is-fade-end')}
+        role="toolbar"
+        aria-label="서식"
+        onScroll={
+          scrollable
+            ? () => {
+                updateFade();
+                setColorOpen(false);
+              }
+            : undefined
+        }
+      >
+        {blockTypes.length > 1 && (
+          <select
+            aria-label="문단 종류"
+            className="aikive-toolbar__select"
+            value={state.blockType}
+            onChange={(e) => setBlockType(e.target.value as BlockType)}
+          >
+            {state.blockType === '' && (
+              <option value="" disabled hidden>
+                여러 종류
+              </option>
+            )}
+            {blockTypes.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
             ))}
-            <input
-              type="color"
-              aria-label="글자색 직접 고르기"
-              onChange={(e) => chain().setColor(e.target.value).run()}
-            />
-          </div>
-        </div>
-      )}
-      {features.align && (
-        <>
-          <ToolButton label="왼쪽 정렬" active={state.isLeft} onClick={() => chain().toggleTextAlign('left').run()}>
-            <AlignLeft />
-          </ToolButton>
-          <ToolButton label="중앙 정렬" active={state.isCenter} onClick={() => chain().toggleTextAlign('center').run()}>
-            <AlignCenter />
-          </ToolButton>
-          <ToolButton label="오른쪽 정렬" active={state.isRight} onClick={() => chain().toggleTextAlign('right').run()}>
-            <AlignRight />
-          </ToolButton>
-          <ToolButton label="양쪽 정렬" active={state.isJustify} onClick={() => chain().toggleTextAlign('justify').run()}>
-            <AlignJustify />
-          </ToolButton>
-        </>
-      )}
-      {features.fontSize && (
-        <select
-          aria-label="글자 크기"
-          className="aikive-toolbar__select"
-          value={state.fontSize}
-          onChange={(e) => (e.target.value ? chain().setFontSize(e.target.value).run() : chain().unsetFontSize().run())}
-        >
-          <option value="">크기</option>
-          {FONT_SIZE_OPTIONS.map((size) => (
-            <option key={size} value={size}>
-              {size.replace('px', '')}
-            </option>
-          ))}
-        </select>
-      )}
-      {features.lineHeight && (
-        <select
-          aria-label="줄간격"
-          className="aikive-toolbar__select"
-          value={state.lineHeight}
-          onChange={(e) =>
-            e.target.value ? chain().setLineHeight(e.target.value).run() : chain().unsetLineHeight().run()
-          }
-        >
-          <option value="">줄간격</option>
-          {LINE_HEIGHT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      )}
-      {features.list && (
-        <>
-          <ToolButton
-            label="글머리 목록"
-            active={state.isBulletList}
-            pressed={state.isBulletList}
-            onClick={() => chain().toggleBulletList().run()}
+          </select>
+        )}
+        <ToolButton label="굵게" active={state.isBold} onClick={() => chain().toggleBold().run()}>
+          <Bold />
+        </ToolButton>
+        <ToolButton label="기울임꼴" active={state.isItalic} onClick={() => chain().toggleItalic().run()}>
+          <Italic />
+        </ToolButton>
+        <ToolButton label="밑줄" active={state.isUnderline} onClick={() => chain().toggleUnderline().run()}>
+          <Underline />
+        </ToolButton>
+        <ToolButton label="취소선" active={state.isStrike} onClick={() => chain().toggleStrike().run()}>
+          <Strikethrough />
+        </ToolButton>
+        {features.color && (
+          <button
+            type="button"
+            aria-label="글자색"
+            title="글자색"
+            aria-pressed={colorOpen}
+            className="aikive-toolbar__button"
+            onClick={toggleColor}
           >
-            <List />
-          </ToolButton>
-          <ToolButton
-            label="번호 목록"
-            active={state.isOrderedList}
-            pressed={state.isOrderedList}
-            onClick={() => chain().toggleOrderedList().run()}
+            <Palette />
+          </button>
+        )}
+        {features.fontSize && (
+          <select
+            aria-label="글자 크기"
+            className="aikive-toolbar__select"
+            value={state.fontSize}
+            onChange={(e) => (e.target.value ? chain().setFontSize(e.target.value).run() : chain().unsetFontSize().run())}
           >
-            <ListOrdered />
+            <option value="">크기</option>
+            {FONT_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {size.replace('px', '')}
+              </option>
+            ))}
+          </select>
+        )}
+        {features.lineHeight && (
+          <select
+            aria-label="줄간격"
+            className="aikive-toolbar__select"
+            value={state.lineHeight}
+            onChange={(e) =>
+              e.target.value ? chain().setLineHeight(e.target.value).run() : chain().unsetLineHeight().run()
+            }
+          >
+            <option value="">줄간격</option>
+            {LINE_HEIGHT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {features.align && (
+          <select
+            aria-label="정렬"
+            className="aikive-toolbar__select"
+            value={state.align}
+            onChange={(e) => (e.target.value ? chain().setTextAlign(e.target.value).run() : chain().unsetTextAlign().run())}
+          >
+            <option value="">정렬</option>
+            {ALIGN_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {features.link && (
+          <ToolButton label="링크 연결" active={state.isLink} onClick={() => onOpenPopover('link')}>
+            <Link />
           </ToolButton>
-        </>
-      )}
-      {features.blocks && (
-        <select
-          aria-label="블록"
-          className="aikive-toolbar__select"
-          value=""
-          onChange={(e) => {
-            const action = e.target.value as (typeof BLOCK_ACTIONS)[number]['value'] | '';
-            if (action) chain()[action]().run();
-          }}
-        >
-          <option value="">블록</option>
-          {BLOCK_ACTIONS.map((a) => (
-            <option key={a.value} value={a.value}>
-              {a.label}
-            </option>
-          ))}
-        </select>
-      )}
-      {features.table &&
-        (state.isTable ? (
+        )}
+        {insertOptions.length > 0 && (
+          <select
+            aria-label="넣기"
+            className="aikive-toolbar__select"
+            value=""
+            onChange={(e) => {
+              if (e.target.value) insert(e.target.value);
+            }}
+          >
+            <option value="">넣기</option>
+            {insertOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {features.table && state.isTable && (
           <select
             aria-label="표 편집"
             className="aikive-toolbar__select"
@@ -327,40 +386,46 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
               </option>
             ))}
           </select>
-        ) : (
-          <ToolButton label="표 삽입" onClick={() => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
-            <Table2 />
+        )}
+        {features.sourceMode && (
+          <ToolButton label="HTML 모드" pressed={sourceMode} disabled={uploading && !sourceMode} onClick={onToggleSource}>
+            <Code2 />
           </ToolButton>
-        ))}
-      {features.image && onPickImage && (
-        <ToolButton label="이미지 넣기" onClick={onPickImage}>
-          <ImageIcon />
-        </ToolButton>
-      )}
-      {features.link && (
-        <ToolButton label="링크 연결" active={state.isLink} onClick={() => onOpenPopover('link')}>
-          <Link />
-        </ToolButton>
-      )}
-      {features.youtube && (
-        <ToolButton label="유튜브 넣기" onClick={() => onOpenPopover('youtube')}>
-          <Youtube />
-        </ToolButton>
-      )}
-      {features.sourceMode && (
-        <ToolButton label="HTML 모드" pressed={sourceMode} disabled={uploading && !sourceMode} onClick={onToggleSource}>
-          <Code2 />
-        </ToolButton>
-      )}
-      {features.undoRedo && (
-        <>
-          <ToolButton label="되돌리기" disabled={!state.canUndo} onClick={() => chain().undo().run()}>
-            <Undo2 />
-          </ToolButton>
-          <ToolButton label="다시 하기" disabled={!state.canRedo} onClick={() => chain().redo().run()}>
-            <Redo2 />
-          </ToolButton>
-        </>
+        )}
+        {features.undoRedo && (
+          <>
+            <ToolButton label="되돌리기" disabled={!state.canUndo} onClick={() => chain().undo().run()}>
+              <Undo2 />
+            </ToolButton>
+            <ToolButton label="다시 하기" disabled={!state.canRedo} onClick={() => chain().redo().run()}>
+              <Redo2 />
+            </ToolButton>
+          </>
+        )}
+      </div>
+      {features.color && (
+        <div ref={paletteRef} className="aikive-toolbar__palette" hidden={!colorOpen} style={{ left: paletteLeft }}>
+          <button
+            type="button"
+            className="aikive-toolbar__swatch is-reset"
+            aria-label="글자색 기본"
+            onClick={() => chain().unsetColor().run()}
+          >
+            기본
+          </button>
+          {(colors ?? COLOR_OPTIONS).map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              className="aikive-toolbar__swatch"
+              aria-label={`글자색 ${c.label}`}
+              title={c.label}
+              style={{ backgroundColor: c.value }}
+              onClick={() => chain().setColor(c.value).run()}
+            />
+          ))}
+          <input type="color" aria-label="글자색 직접 고르기" onChange={(e) => chain().setColor(e.target.value).run()} />
+        </div>
       )}
     </div>
   );
