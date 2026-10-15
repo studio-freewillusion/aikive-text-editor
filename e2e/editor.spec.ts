@@ -197,3 +197,212 @@ test('말풍선 툴바는 에디터 좌우 밖으로 나가지 않는다', async
     expect(box.x + box.width).toBeLessThanOrEqual(editorBox.x + editorBox.width + 1);
   }
 });
+
+test('전체 선택한 말풍선 툴바는 글자 위치를 따른다(왼쪽 글이면 왼쪽, 오른쪽 글이면 오른쪽)', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  for (const [align, side] of [['left', 'left'], ['right', 'right']] as const) {
+    await page.goto('/?toolbar=bubble&content=' + encodeURIComponent(`<p style="text-align: ${align}">짧은 줄</p><p style="text-align: ${align}">둘째 줄</p>`));
+    const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+    await page.locator('.ProseMirror p').last().click();
+    await page.keyboard.press('ControlOrMeta+a');
+    const bar = page.getByRole('toolbar', { name: '서식' });
+    await expect(bar).toBeVisible();
+    await page.waitForTimeout(200);
+    const box = (await bar.boundingBox())!;
+    if (side === 'left') expect(box.x).toBeLessThanOrEqual(editorBox.x + 1);
+    else expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
+  }
+});
+
+test('끝이 인용·목록이거나 빈 줄까지 고른 선택도 말풍선 툴바가 글자 쪽에 붙는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  for (const content of [
+    '<blockquote><p style="text-align: right">인용 오른쪽</p></blockquote>',
+    '<ul><li><p style="text-align: right">항목1</p></li><li><p style="text-align: right">항목2</p></li></ul>',
+  ]) {
+    await page.goto('/?toolbar=bubble&content=' + encodeURIComponent(content));
+    const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+    await page.locator('.ProseMirror p').first().click();
+    await page.keyboard.press('ControlOrMeta+a');
+    const bar = page.getByRole('toolbar', { name: '서식' });
+    await expect(bar).toBeVisible();
+    await page.waitForTimeout(200);
+    const box = (await bar.boundingBox())!;
+    expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
+  }
+  await page.goto('/?toolbar=bubble&content=' + encodeURIComponent('<p style="text-align: right">오른쪽 글</p><p></p>'));
+  const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+  await page.locator('.ProseMirror').evaluate((el) => {
+    const range = document.createRange();
+    range.setStart(el.querySelector('p')!.firstChild!, 0);
+    range.setEnd(el.querySelectorAll('p')[1], 0);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+  });
+  await page.locator('.ProseMirror').focus();
+  const bar = page.getByRole('toolbar', { name: '서식' });
+  await expect(bar).toBeVisible();
+  await page.waitForTimeout(200);
+  const box = (await bar.boundingBox())!;
+  expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
+});
+
+for (const startEditable of [true, false]) {
+test(`말풍선 툴바 폭이 바뀌면 위치를 다시 잡아 오른쪽 글에 붙어 있다(${startEditable ? '처음부터 편집' : '편집을 나중에 켬'})`, async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  const cell = (t: string) => `<td><p style="text-align: right">${t}</p></td>`;
+  await page.goto(`/?toolbar=bubble${startEditable ? '' : '&editable=false'}&content=` + encodeURIComponent(`<p style="text-align: right">오른쪽 글</p><table><tbody><tr>${cell('셀1')}${cell('셀2')}</tr></tbody></table>`));
+  if (!startEditable) await page.getByRole('button', { name: '편집 전환' }).click();
+  const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+  const bar = page.getByRole('toolbar', { name: '서식' });
+  await page.locator('.ProseMirror td p').last().click();
+  await expect(bar).toBeVisible();
+  const wide = (await bar.boundingBox())!.width;
+  await page.keyboard.press('ControlOrMeta+a');
+  await expect.poll(async () => (await bar.boundingBox())!.width).toBeLessThan(wide);
+  await page.waitForTimeout(300);
+  const box = (await bar.boundingBox())!;
+  expect(box.x + box.width).toBeGreaterThanOrEqual(editorBox.x + editorBox.width - 1);
+});
+}
+
+for (const [mode, width] of [['fixed', 380], ['bubble', 380], ['fixed', 480], ['bubble', 480]] as const) {
+  test(`좁은 에디터(${width}px)에서 ${mode === 'fixed' ? '고정' : '말풍선'} 툴바는 한 줄로 두고 넘치는 항목을 더 보기에 넣는다`, async ({ page }) => {
+    await page.setViewportSize({ width: 1300, height: 800 });
+    await page.goto(`/?toolbar=${mode}&content=` + encodeURIComponent('<p>좁은 칸 글자</p>'));
+    await page.addStyleTag({ content: `.aikive-text-editor { max-width: ${width}px; }` });
+    const editorBox = (await page.locator('.aikive-text-editor').boundingBox())!;
+    const bar = page.getByRole('toolbar', { name: '서식' });
+    await page.locator('.ProseMirror p').click();
+    await page.keyboard.press('End');
+    await page.keyboard.type('x');
+    await expect(html(page)).toHaveText('<p>좁은 칸 글자x</p>');
+    await page.waitForTimeout(600);
+    if (mode === 'bubble') await page.keyboard.press('ControlOrMeta+a');
+    await expect(bar).toBeVisible();
+    const more = bar.getByRole('button', { name: '더 보기' });
+    await expect(more).toBeVisible();
+    await page.waitForTimeout(300);
+    const box = (await bar.boundingBox())!;
+    expect(box.height).toBeLessThan(45);
+    expect(box.x + box.width).toBeLessThanOrEqual(editorBox.x + editorBox.width + 1);
+    // 오른쪽 끝 항목부터 옮겨져 되돌리기 줄은 더 보기 안에 있다
+    await expect(bar.getByRole('button', { name: '다시 하기' })).toHaveCount(0);
+    await more.click();
+    const panel = page.locator('.aikive-toolbar__more');
+    await expect(panel).toBeVisible();
+    await panel.getByRole('button', { name: '되돌리기' }).click();
+    await expect(html(page)).toHaveText('<p>좁은 칸 글자</p>');
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+  });
+}
+
+test('넓은 에디터에서는 더 보기 없이 모든 항목이 한 줄에 있다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>넓은 칸</p>');
+  const bar = page.getByRole('toolbar', { name: '서식' });
+  await expect(bar.getByRole('button', { name: '다시 하기' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: '더 보기' })).toHaveCount(0);
+});
+
+test('더 보기 상자의 Esc 는 상자만 닫고 바깥(다이얼로그 등)으로 넘기지 않는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.evaluate(() => {
+    (window as unknown as { escSeen: number }).escSeen = 0;
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') (window as unknown as { escSeen: number }).escSeen += 1;
+    }, { capture: true });
+  });
+  const more = page.getByRole('button', { name: '더 보기' });
+  await more.click();
+  const panel = page.locator('.aikive-toolbar__more');
+  await expect(panel).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+  expect(await page.evaluate(() => (window as unknown as { escSeen: number }).escSeen)).toBe(0);
+  await expect(more).toBeFocused();
+});
+
+test('더 보기 상자는 칸이 넓어져 사라지면 닫히고, 다시 좁아져도 저절로 열리지 않는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  const setWidth = (w: number) => page.evaluate((w) => { document.querySelector<HTMLElement>('.aikive-text-editor')!.style.maxWidth = `${w}px`; }, w);
+  await setWidth(380);
+  const more = page.getByRole('button', { name: '더 보기' });
+  await more.click();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await setWidth(1000);
+  await expect(more).toHaveCount(0);
+  await setWidth(380);
+  await expect(more).toBeVisible();
+  await expect(page.locator('.aikive-toolbar__more')).toBeHidden();
+});
+
+test('칸이 좁아져 포커스 항목이 더 보기로 옮겨지면 포커스는 더 보기 버튼으로 간다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.getByRole('button', { name: 'HTML 모드' }).focus();
+  await page.evaluate(() => { document.querySelector<HTMLElement>('.aikive-text-editor')!.style.maxWidth = '380px'; });
+  await expect(page.getByRole('button', { name: '더 보기' })).toBeFocused();
+});
+
+test('더 보기 상자 안에서 링크 입력 창을 열면 상자는 닫힌다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.locator('.ProseMirror p').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.getByRole('button', { name: '더 보기' }).click();
+  const panel = page.locator('.aikive-toolbar__more');
+  await panel.getByRole('button', { name: '링크 연결' }).click();
+  await expect(page.locator('.aikive-popover')).toBeVisible();
+  await expect(panel).toBeHidden();
+});
+
+test('더 보기 상자가 열린 채 본문에서 Esc 를 눌러도 이어 치는 글자는 본문에 들어간다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.locator('.ProseMirror p').click();
+  await page.keyboard.press('End');
+  await page.getByRole('button', { name: '더 보기' }).click();
+  await page.locator('.ProseMirror').focus();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Escape');
+  await page.keyboard.type('ab');
+  await expect(html(page)).toHaveText('<p>좁은 칸 글자ab</p>');
+  await expect(page.locator('.aikive-toolbar__more')).toBeHidden();
+});
+
+test('더 보기 상자가 열린 채 링크 입력 창을 Esc 로 닫으면 입력 창만 닫히고 본문에 이어 쓸 수 있다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.locator('.ProseMirror p').click();
+  await page.keyboard.press('End');
+  await page.getByRole('button', { name: '더 보기' }).click();
+  await page.locator('.ProseMirror').focus();
+  await page.keyboard.press('End');
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.locator('.aikive-popover')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.aikive-popover')).toBeHidden();
+  await expect(page.locator('.ProseMirror')).toBeFocused();
+  await page.keyboard.type('z');
+  await expect(html(page)).toContainText('z');
+});
+
+test('더 보기 상자가 열린 채 단축키로 링크 입력 창을 열면 상자는 닫힌다', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open(page, '<p>좁은 칸 글자</p>');
+  await page.addStyleTag({ content: '.aikive-text-editor { max-width: 380px; }' });
+  await page.locator('.ProseMirror p').click();
+  await page.getByRole('button', { name: '더 보기' }).click();
+  await page.locator('.ProseMirror').focus();
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.locator('.aikive-popover')).toBeVisible();
+  await expect(page.locator('.aikive-toolbar__more')).toBeHidden();
+});

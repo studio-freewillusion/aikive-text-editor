@@ -79,7 +79,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `editable` | 기본 `true` |
 | `features` | 툴바 기능 켜기/끄기(아래) |
 | `colors` | 글자색 팔레트의 미리 정한 색 `{ label, value }[]`. 없으면 기본 9색. 「기본」·「직접 고르기」 는 항상 있음 |
-| `toolbar` | `'fixed'`(기본) 또는 `'bubble'`(글자를 고르면 뜸). 터치 기기는 항상 고정 툴바 |
+| `toolbar` | `'fixed'`(기본) 또는 `'bubble'`(글자를 고르면 뜸). 터치 기기는 항상 고정 툴바(밀어서 넘김). 칸이 좁으면 툴바는 한 줄을 유지하고 들어가지 않는 항목을 오른쪽 끝부터 「⋯」(더 보기)로 옮긴다 |
 | `htmlClassNames` | `{ youtube }` — 저장 HTML 의 유튜브 iframe 에 붙일 class |
 | `onChange(html)` | 내용이 바뀔 때. 빈 에디터면 `''` |
 | `onUploadImage(file)` | 이미지를 올리고 주소를 돌려줌. 없으면 이미지 넣기를 숨김 |

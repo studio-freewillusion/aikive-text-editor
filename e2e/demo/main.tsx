@@ -10,10 +10,15 @@ function Demo() {
   const ref = useRef<AikiveTextEditorHandle>(null);
   const [html, setHtml] = useState(params.get('content') ?? '<p>시작</p>');
   const [notices, setNotices] = useState<string[]>([]);
+  const [editable, setEditable] = useState(params.get('editable') !== 'false');
   return (
     <main>
+      <button type="button" onClick={() => setEditable((v) => !v)}>
+        편집 전환
+      </button>
       <AikiveTextEditor
         ref={ref}
+        editable={editable}
         initialContent={html}
         toolbar={params.get('toolbar') === 'bubble' ? 'bubble' : 'fixed'}
         onChange={setHtml}

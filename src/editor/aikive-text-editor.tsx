@@ -1,6 +1,7 @@
-import { EditorState, NodeSelection } from '@tiptap/pm/state';
+import { EditorState, NodeSelection, PluginKey } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import DragHandle from '@tiptap/extension-drag-handle-react';
-import { EditorContent, useEditor, type Editor } from '@tiptap/react';
+import { EditorContent, posToDOMRect, useEditor, type Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { GripVertical } from '../ui/icons';
@@ -164,6 +165,27 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     }
   }, [editor]);
 
+  // tiptap 은 선택 처음·끝 자리로 재서, 끝이 블록 경계(전체 선택·문서 끝 빈 문단·끌어 옮긴 블록)면 글자와 상관없이 가운데에 뜬다 — 선택 안 첫·끝 글자로 잰다
+  const bubbleReference = useCallback(() => {
+    if (!editor) return null;
+    const { doc, selection } = editor.state;
+    if (selection instanceof NodeSelection || selection instanceof CellSelection) return null;
+    let from = -1;
+    let to = -1;
+    doc.nodesBetween(selection.from, selection.to, (node, pos) => {
+      if (!node.isText) return true;
+      if (from < 0) from = Math.max(pos, selection.from);
+      to = Math.min(pos + node.nodeSize, selection.to);
+      return false;
+    });
+    if (from < 0) return null;
+    const rect = posToDOMRect(editor.view, from, to);
+    return { getBoundingClientRect: () => rect, getClientRects: () => [rect] };
+  }, [editor]);
+
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const [bubblePluginKey] = useState(() => new PluginKey('aikiveBubbleMenu'));
+
   const closePopover = useCallback(
     (refocus: boolean) => {
       setPopover(null);
@@ -242,6 +264,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     [editor, sourceMode, sourceText],
   );
 
+  const useBubble = toolbar === 'bubble' && !coarsePointer && !sourceMode;
   const toolbarNode = editor ? (
     <Toolbar
       editor={editor}
@@ -253,9 +276,20 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       colors={colors}
       uploading={uploading}
       scrollable={coarsePointer}
+      boundary={useBubble ? rootEl : null}
+      popoverOpen={popover !== null}
     />
   ) : null;
-  const useBubble = toolbar === 'bubble' && !coarsePointer && !sourceMode;
+  // tiptap 은 툴바 내용이 바뀌기 전 폭으로 위치를 재서, 표 편집이 빠지는 등 폭이 바뀌면 글자 쪽에서 떨어진다 — 폭이 바뀔 때 다시 잰다
+  useEffect(() => {
+    const el = bubbleRef.current;
+    if (!editor || !useBubble || !el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      if (!editor.isDestroyed) editor.view.dispatch(editor.state.tr.setMeta(bubblePluginKey, 'updatePosition'));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [editor, editable, useBubble, bubblePluginKey]);
   // 말풍선은 화면이 아니라 에디터 좌우 안에서만 밀어, 본문 밖(제목 칸 등)으로 나가지 않게 한다
   const bubbleShift = rootEl ? { boundary: rootEl, padding: 0 } : true;
 
@@ -263,7 +297,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     <div ref={setRootEl} className={['aikive-text-editor', className].filter(Boolean).join(' ')}>
       {editable && !useBubble && <div className="aikive-text-editor__toolbar">{toolbarNode}</div>}
       {editable && editor && useBubble && (
-        <BubbleMenu editor={editor} options={{ placement: 'top', offset: 8, shift: bubbleShift }} updateDelay={0} shouldShow={shouldShowBubbleMenu}>
+        <BubbleMenu ref={bubbleRef} pluginKey={bubblePluginKey} editor={editor} options={{ placement: 'top', offset: 8, shift: bubbleShift }} updateDelay={0} shouldShow={shouldShowBubbleMenu} getReferencedVirtualElement={bubbleReference}>
           {toolbarNode}
         </BubbleMenu>
       )}
