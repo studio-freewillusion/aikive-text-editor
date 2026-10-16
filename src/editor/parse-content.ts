@@ -13,14 +13,17 @@ function removeEmptyYouTubeDivs(html: string): string {
   return template.innerHTML;
 }
 
+const BLOCK_CONTAINERS = new Set(['doc', 'blockquote', 'listItem', 'tableCell', 'tableHeader']);
+
 // JSON 본문은 노드 규칙(parseHTML)을 거치지 않아 허용 밖 영상 블록을 불러올 때 뺀다
 function removeInvalidAikiveVideos(node: JSONContent, hosts: readonly string[]): JSONContent {
   if (!node.content) return node;
   const content = node.content
     .filter((child) => child.type !== 'aikiveVideo' || isAikiveEmbedSrc(String(child.attrs?.src ?? ''), hosts))
     .map((child) => removeInvalidAikiveVideos(child, hosts));
-  // 영상 블록만 있던 인용·표 칸이 비면 문서 규칙에 어긋나 빈 문단을 둔다
-  return { ...node, content: content.length || !node.content.length ? content : [{ type: 'paragraph' }] };
+  // 영상 블록만 있던 인용·표 칸이 비면 문서 규칙에 어긋나 빈 문단을 둔다(문단·제목은 비어도 된다)
+  const fill = !content.length && node.content.length > 0 && BLOCK_CONTAINERS.has(String(node.type));
+  return { ...node, content: fill ? [{ type: 'paragraph' }] : content };
 }
 
 export function parseContent(raw: string | undefined, embedHosts: readonly string[] = []): string | JSONContent {

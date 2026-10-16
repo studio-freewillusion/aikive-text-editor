@@ -95,4 +95,17 @@ describe('JSON 으로 들어온 영상 블록', () => {
     expect(() => editor!.state.doc.check()).not.toThrow();
     expect(editor.getHTML()).toContain('<blockquote><p></p></blockquote>');
   });
+
+  it('문단 안에 잘못 든 영상 블록을 빼도 문단 안에 문단을 넣지 않는다', () => {
+    const json = JSON.stringify({
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'aikiveVideo', attrs: { src: 'javascript:parent.alert(1)//' } }] }],
+    });
+    editor = new Editor({
+      element: document.createElement('div'),
+      extensions: buildExtensions(true, {}, undefined, undefined, HOSTS),
+      content: parseContent(json, HOSTS),
+    });
+    expect(() => editor!.state.doc.check()).not.toThrow();
+  });
 });
