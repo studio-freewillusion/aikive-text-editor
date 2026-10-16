@@ -1,3 +1,13 @@
+/* 툴바·입력 창도 본문과 같은 글꼴 변수를 따른다. 대체값이 없어 변수가 없으면 페이지 글꼴을 물려받는다 */
+.aikive-text-editor {
+  font-family: var(--aikive-text-font);
+}
+
+/* 버튼·선택 상자는 브라우저 기본 글꼴을 쓰므로 물려받게 한다 */
+.aikive-text-editor :is(button, select, input) {
+  font-family: inherit;
+}
+
 .aikive-text-editor .tiptap {
   overflow-x: hidden;
   background: var(--aikive-text-bg);

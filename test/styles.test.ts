@@ -14,6 +14,8 @@ describe('styles.css', () => {
     expect(css).toContain('var(--aikive-text-link');
     expect(css).toContain('.aikive-toolbar');
     expect(css).toContain('.tiptap [data-aikive-video] iframe');
+    // 툴바·입력 창은 본문 밖이라 따로 글꼴 변수를 걸어야 쓰는 쪽 페이지 글꼴을 물려받지 않는다
+    expect(css).toMatch(/\.aikive-text-editor\s*\{\s*font-family: var\(--aikive-text-font\);/);
     // 표·코드 블록 가로 막대는 평소 숨기고 올렸을 때만 보인다(기존 화면과 같게)
     expect(css).toMatch(/\.tiptap pre,\s*\.tiptap \.tableWrapper\s*\{[^}]*scrollbar-color: transparent transparent/);
     expect(css).toMatch(/\.tiptap pre:hover[^{]*\{[^}]*scrollbar-color: var\(--aikive-text-scrollbar\) transparent/);
@@ -32,8 +34,9 @@ describe('styles.css', () => {
     expect(css).toContain('--aikive-quote-bg: #28282b');
     // 팔레트는 밀어서 넘기는 툴바 밖, 감싸는 상자 기준으로 띄운다
     expect(css).toMatch(/\.aikive-toolbar-wrap\s*\{[^}]*position: relative/);
-    // 본문 글꼴은 Pretendard 가 기본이고 변수로 바꿀 수 있다(글꼴 파일은 쓰는 쪽이 불러온다)
-    expect(css).toMatch(/\.tiptap\s*\{[^}]*font-family: var\(--aikive-text-font/);
-    expect(css).toMatch(/--aikive-text-font:\s*Pretendard,/);
+    // 글꼴은 정해 두지 않는다 — 변수를 안 주면 쓰는 쪽 페이지 글꼴을 물려받고, 주면 그 글꼴을 쓴다
+    expect(css).toMatch(/\.tiptap\s*\{[^}]*font-family: var\(--aikive-text-font\);/);
+    expect(css).not.toMatch(/--aikive-text-font:/);
+    expect(css).not.toMatch(/pretendard/i);
   }, 180_000);
 });

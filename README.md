@@ -141,7 +141,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `--aikive-text-error` | `#f96960` |
 | `--aikive-quote-bg` | `#28282b` |
 | `--aikive-quote-border` | `#525259` |
-| `--aikive-text-font` | `Pretendard, "Pretendard Variable", …, sans-serif` (글꼴 파일은 쓰는 쪽에서 불러옵니다) |
+| `--aikive-text-font` | 없음 — 지정하지 않으면 페이지 글꼴을 따릅니다. 본문·툴바·입력 창에 다른 글꼴을 쓰려면 지정합니다 |
 | `--aikive-toolbar-bg` | `#28282b` |
 | `--aikive-toolbar-fg` | `#ebebeb` |
 | `--aikive-toolbar-border` | `#525259` |
