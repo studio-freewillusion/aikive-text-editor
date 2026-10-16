@@ -406,3 +406,62 @@ test('더 보기 상자가 열린 채 단축키로 링크 입력 창을 열면 �
   await expect(page.locator('.aikive-popover')).toBeVisible();
   await expect(page.locator('.aikive-toolbar__more')).toBeHidden();
 });
+
+test.describe('영상 주소 붙여넣기', () => {
+  const AIKIVE = 'https://video.example.com/watch?v=abc123';
+  const EMBED_SRC = 'https://video.example.com/embed/watch/abc123';
+  const pasteText = (page: Page, text: string) =>
+    page.locator('.ProseMirror').evaluate((el, t) => {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', t);
+      el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    }, text);
+  const menu = (page: Page) => page.getByRole('menu', { name: '붙여넣기 방식' });
+
+  test.beforeEach(async ({ page }) => {
+    await page.route('https://video.example.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<p>player</p>' }));
+    await open(page, '<p></p>');
+    await page.locator('.ProseMirror').click();
+  });
+
+  test('「플레이어로 넣기」 를 고르면 영상 블록이 되고 에디터 안에서만 미리 보기 주소를 쓴다', async ({ page }) => {
+    await pasteText(page, AIKIVE);
+    await menu(page).getByRole('menuitem', { name: '플레이어로 넣기' }).click();
+    await expect(menu(page)).toBeHidden();
+    await expect(html(page)).toContainText(`<div data-aikive-video=""><iframe src="${EMBED_SRC}"`);
+    await expect(page.locator('.ProseMirror [data-aikive-video] iframe')).toHaveAttribute('src', `${EMBED_SRC}?preview=1`);
+    await expect(page.locator('[data-testid="viewer"] [data-aikive-video] iframe')).toHaveAttribute('src', EMBED_SRC);
+  });
+
+  test('끝에 줄바꿈이 붙은 주소도 창이 뜨고 줄이 늘지 않는다', async ({ page }) => {
+    await pasteText(page, `${AIKIVE}\n`);
+    await expect(menu(page)).toBeVisible();
+    await expect(page.locator('.ProseMirror > p')).toHaveCount(1);
+    await expect(html(page)).toContainText(`href="${AIKIVE}"`);
+  });
+
+  test('↑ 와 Enter 로 플레이어를 넣는다', async ({ page }) => {
+    await pasteText(page, AIKIVE);
+    await expect(menu(page)).toBeVisible();
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Enter');
+    await expect(html(page)).toContainText('data-aikive-video');
+  });
+
+  test('선택 창의 Esc 는 창만 닫고 바깥(다이얼로그 등)으로 넘기지 않으며 이어 쓸 수 있다', async ({ page }) => {
+    await page.evaluate(() => {
+      (window as unknown as { escSeen: number }).escSeen = 0;
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') (window as unknown as { escSeen: number }).escSeen += 1;
+      }, { capture: true });
+    });
+    await pasteText(page, AIKIVE);
+    await expect(menu(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    expect(await page.evaluate(() => (window as unknown as { escSeen: number }).escSeen)).toBe(0);
+    await page.keyboard.type('다음');
+    await expect(html(page)).toContainText(`href="${AIKIVE}"`);
+    await expect(html(page)).toContainText('다음');
+  });
+});

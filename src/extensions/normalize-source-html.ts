@@ -75,6 +75,7 @@ const BLOCK_TAGS = new Set([
 const isPreservedContainer = (element: HTMLDivElement) => {
     return (
         element.hasAttribute('data-youtube-video') ||
+        element.hasAttribute('data-aikive-video') ||
         element.getAttribute('data-type') === 'videoBlock'
     );
 };

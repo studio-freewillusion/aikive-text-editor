@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core';
 
-export type PopoverKind = 'link' | 'youtube' | 'alt';
+export type PopoverKind = 'link' | 'alt';
 
 export interface InputPopoverBridgeStorage {
   open: ((kind: PopoverKind, pos?: number) => boolean) | null;

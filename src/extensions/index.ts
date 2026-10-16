@@ -16,3 +16,5 @@ export {
   type UploadPlaceholderStorage,
 } from './upload-placeholder';
 export { InputPopoverBridge, isInputPopoverOpen, openInputPopover, type InputPopoverBridgeStorage, type PopoverKind } from './input-popover-bridge';
+export { AikiveVideo, AIKIVE_VIDEO_IFRAME_ATTRS, type AikiveVideoOptions } from './aikive-video';
+export { PastedUrl, type PastedUrlRange, type PastedUrlStorage } from './pasted-url';

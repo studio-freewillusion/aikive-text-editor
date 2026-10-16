@@ -5,11 +5,9 @@ import {
   ALT_MAX_LENGTH,
   LINK_EMPTY_MESSAGE,
   LINK_SCHEME_MESSAGE,
-  YOUTUBE_INVALID_MESSAGE,
   applyAlt,
   applyLink,
   currentLink,
-  insertYoutube,
   removeLink,
 } from '../src/editor/popover-actions';
 import { buildExtensions } from '../src/editor/use-editor-setup';
@@ -100,46 +98,6 @@ describe('currentLink·removeLink', () => {
     removeLink(editor);
     expect(editor.getHTML()).not.toContain('<a');
     expect(editor.getHTML()).toContain('<img');
-  });
-});
-
-describe('insertYoutube', () => {
-  it('유튜브 주소를 커서 자리에 넣는다', () => {
-    create('<p>a</p>').commands.setTextSelection(2);
-    expect(insertYoutube(editor, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBeNull();
-    expect(editor.getHTML()).toContain('data-youtube-video');
-  });
-
-  it('스킴 없는 짧은 주소도 넣는다', () => {
-    create('<p>a</p>').commands.setTextSelection(2);
-    expect(insertYoutube(editor, 'youtu.be/dQw4w9WgXcQ')).toBeNull();
-    expect(editor.getHTML()).toContain('data-youtube-video');
-  });
-
-  it.each([
-    ['글 중간', '<p>abc</p><p>def</p>', 4, /<\/div><p>Z<\/p><p>def<\/p>/],
-    ['글 끝', '<p>abc</p>', 4, /<\/div><p>Z<\/p>$/],
-    ['표 칸 가운데', '<table><tbody><tr><td><p>a</p></td><td><p>b</p></td></tr></tbody></table>', 5, /<\/div><p>Z<\/p><\/td><td[^>]*><p>b<\/p>/],
-    ['목록 항목 가운데', '<ul><li><p>one</p></li><li><p>two</p></li></ul>', 6, /<\/div><p>Z<\/p><\/li><li><p>two<\/p>/],
-  ])('%s에 넣고 바로 이어 쓰면 영상 바로 뒤 새 줄에 들어간다', (_, content, pos, typed) => {
-    create(content).commands.setTextSelection(pos);
-    insertYoutube(editor, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-    expect(editor.state.selection).toBeInstanceOf(TextSelection);
-    editor.commands.insertContent('Z');
-    expect(editor.getHTML()).toContain('data-youtube-video');
-    expect(editor.getHTML()).toMatch(typed);
-  });
-
-  it('통째로 고른 이미지를 영상으로 바꾸지 않고 그 뒤에 넣는다', () => {
-    create('<p>a</p><img src="https://cdn.example.com/a.png"><p>b</p>').commands.setNodeSelection(3);
-    expect(insertYoutube(editor, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBeNull();
-    expect(editor.getHTML()).toMatch(/<img[^>]*><div data-youtube-video/);
-  });
-
-  it.each(['https://example.com/v', '', 'javascript:alert(1)'])('「%s」 는 거부한다', (input) => {
-    create('<p>a</p>').commands.setTextSelection(2);
-    expect(insertYoutube(editor, input)).toBe(YOUTUBE_INVALID_MESSAGE);
-    expect(editor.getHTML()).not.toContain('data-youtube-video');
   });
 });
 

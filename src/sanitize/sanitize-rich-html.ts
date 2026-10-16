@@ -1,4 +1,5 @@
 import DOMPurify from 'isomorphic-dompurify';
+import { isAikiveEmbedSrc } from './aikive-video-url';
 
 // 본문 HTML 정화 — 허용 iframe 호스트·새 탭 링크 보호는 훅으로 항상 강제하고 허용 폭만 옵션으로 받는다
 // iframe(영상 임베드)으로 허용할 도메인 목록. 이 목록 밖의 iframe은 통째로 제거한다.
@@ -33,6 +34,9 @@ let isLazyMediaCall = false;
 // 호출마다 다른 추가 허용 호스트 — 훅은 한 번만 등록되므로 호출 동안만 담아 둔다
 let extraIframeHostsCall: ReadonlySet<string> = new Set();
 
+// 영상 블록으로 받는 호스트 — 이 호스트의 iframe 은 정확한 embed 경로일 때만 남긴다
+let embedHostsCall: readonly string[] = [];
+
 /**
  * src 문자열에서 도메인(host)만 뽑아낸다. 빈 값/상대경로/이상한 값이면 빈 문자열을 돌려줘
  * 허용 목록과 절대 일치하지 않게 한다(=제거 대상).
@@ -62,11 +66,18 @@ const ensureSecurityHook = () => {
         if (typeof el.getAttribute !== 'function') return;
 
         if (el.tagName === 'IFRAME') {
-            const host = getHost(el.getAttribute('src') ?? '');
-            if (!ALLOWED_IFRAME_HOSTS.has(host) && !extraIframeHostsCall.has(host)) {
+            const src = el.getAttribute('src') ?? '';
+            const host = getHost(src);
+            const isEmbedHost = embedHostsCall.some((h) => h.toLowerCase() === host);
+            const keep = isEmbedHost
+                ? isAikiveEmbedSrc(src, embedHostsCall)
+                : ALLOWED_IFRAME_HOSTS.has(host) || extraIframeHostsCall.has(host);
+            if (!keep) {
                 el.remove();
                 return;
             }
+            // 임베드 화면이 퍼간 곳의 도메인을 읽을 수 있게 출처는 보낸다
+            el.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
         }
 
         if (el.getAttribute('target') === '_blank') {
@@ -91,6 +102,8 @@ interface SanitizeOptions {
     lazyMedia?: boolean;
     /** 기본 허용 목록 밖에서 이번 호출만 더 허용할 iframe 호스트. */
     extraIframeHosts?: string[];
+    /** 영상 블록으로 받는 호스트. 이 호스트의 iframe 은 `/embed/watch/<ID>` 경로만 남긴다. */
+    embedHosts?: string[];
 }
 
 /**
@@ -99,11 +112,12 @@ interface SanitizeOptions {
  */
 export const sanitizeRichHtml = (html: string, options: SanitizeOptions = {}): string => {
     ensureSecurityHook();
-    const { allowIframe = true, extraAttrs = [], lazyMedia = false, extraIframeHosts = [] } = options;
+    const { allowIframe = true, extraAttrs = [], lazyMedia = false, extraIframeHosts = [], embedHosts = [] } = options;
 
     isPackageCall = true;
     isLazyMediaCall = lazyMedia;
     extraIframeHostsCall = new Set(extraIframeHosts);
+    embedHostsCall = embedHosts;
     try {
         return DOMPurify.sanitize(html, {
             ...(allowIframe ? { ADD_TAGS: ['iframe'] } : {}),
@@ -113,5 +127,6 @@ export const sanitizeRichHtml = (html: string, options: SanitizeOptions = {}): s
         isPackageCall = false;
         isLazyMediaCall = false;
         extraIframeHostsCall = new Set();
+        embedHostsCall = [];
     }
 };

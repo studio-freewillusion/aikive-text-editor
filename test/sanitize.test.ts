@@ -48,3 +48,43 @@ describe('sanitizeRichHtml', () => {
     expect(out).not.toContain('rel=');
   });
 });
+
+describe('영상 블록 iframe', () => {
+  const HOSTS = ['video.example.com'];
+  const wrap = (src: string) => `<div data-aikive-video=""><iframe src="${src}"></iframe></div>`;
+
+  it('허용 호스트의 embed 경로만 남기고 래퍼·referrerpolicy 를 둔다', () => {
+    const out = sanitizeRichHtml(wrap('https://video.example.com/embed/watch/abc123'), { embedHosts: HOSTS });
+    expect(out).toContain('data-aikive-video');
+    expect(out).toContain('src="https://video.example.com/embed/watch/abc123"');
+    expect(out).toContain('referrerpolicy="strict-origin-when-cross-origin"');
+  });
+
+  it.each([
+    'https://video.example.com/embed/watch/abc123?preview=1',
+    'https://video.example.com/watch?v=abc123',
+    'https://video.example.com/embed/watch/abc123/../x',
+    'https://video.example.com/settings',
+    'https://other.example.com/embed/watch/abc123',
+  ])('%s 는 iframe 을 지운다', (src) => {
+    expect(sanitizeRichHtml(wrap(src), { embedHosts: HOSTS })).not.toContain('<iframe');
+  });
+
+  it('embedHosts 를 넘기지 않으면 지운다', () => {
+    expect(sanitizeRichHtml(wrap('https://video.example.com/embed/watch/abc123'))).not.toContain('<iframe');
+  });
+
+  it('embedHosts 의 호스트는 extraIframeHosts 에 있어도 경로를 본다', () => {
+    const out = sanitizeRichHtml(wrap('https://video.example.com/settings'), {
+      embedHosts: HOSTS,
+      extraIframeHosts: HOSTS,
+    });
+    expect(out).not.toContain('<iframe');
+  });
+
+  it('유튜브 iframe 에도 referrerpolicy 를 붙인다', () => {
+    expect(sanitizeRichHtml('<iframe src="https://www.youtube-nocookie.com/embed/abc"></iframe>')).toContain(
+      'referrerpolicy="strict-origin-when-cross-origin"',
+    );
+  });
+});

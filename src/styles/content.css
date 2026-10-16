@@ -2,7 +2,8 @@
 @charset "UTF-8";
 .tiptap {
   color: var(--aikive-text-fg, #e4e6e7);
-  font-family: var(--aikive-text-font, sans-serif);
+  /* 대체값 없이 둬 변수가 없으면 무효 → 페이지 글꼴을 물려받는다 */
+  font-family: var(--aikive-text-font);
   /* layout */
 }
 .tiptap:first-child {
@@ -289,6 +290,13 @@
   .tiptap [data-type=videoBlock] video {
     height: 360px;
   }
+}
+.tiptap [data-aikive-video] iframe {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border: 0;
 }
 .tiptap .selectedCell::after {
   position: absolute;

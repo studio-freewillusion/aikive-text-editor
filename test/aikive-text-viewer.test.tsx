@@ -64,3 +64,19 @@ describe('AikiveTextViewer', () => {
     expect(onClickImage).not.toHaveBeenCalled();
   });
 });
+
+describe('영상 블록', () => {
+  const HTML = '<div data-aikive-video=""><iframe src="https://video.example.com/embed/watch/abc123"></iframe></div>';
+
+  it('embedHosts 의 영상 iframe 을 그린다', () => {
+    const { container } = render(<AikiveTextViewer content={HTML} embedHosts={['video.example.com']} />);
+    expect(container.querySelector('[data-aikive-video] iframe')?.getAttribute('src')).toBe(
+      'https://video.example.com/embed/watch/abc123',
+    );
+  });
+
+  it('embedHosts 가 없으면 iframe 을 그리지 않는다', () => {
+    const { container } = render(<AikiveTextViewer content={HTML} />);
+    expect(container.querySelector('iframe')).toBeNull();
+  });
+});

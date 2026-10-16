@@ -1,11 +1,10 @@
 import type { Editor } from '@tiptap/core';
-import { NodeSelection, Selection } from '@tiptap/pm/state';
+import { Selection } from '@tiptap/pm/state';
 import { normalizeImageHref } from '../sanitize';
 import { placeCaretAfterBlock } from './caret-after';
 
 export const LINK_EMPTY_MESSAGE = '주소를 입력해 주세요.';
 export const LINK_SCHEME_MESSAGE = 'http 또는 https 주소만 넣을 수 있습니다.';
-export const YOUTUBE_INVALID_MESSAGE = '유튜브 주소를 확인해 주세요.';
 export const ALT_MAX_LENGTH = 200;
 
 export interface CurrentLink {
@@ -55,22 +54,6 @@ export function applyLink(editor: Editor, input: string, newTab: boolean): strin
 export function removeLink(editor: Editor): void {
   if (editor.isActive('image')) editor.chain().focus().unsetImageLink().run();
   else editor.chain().focus().extendMarkRange('link').unsetLink().run();
-}
-
-export function insertYoutube(editor: Editor, input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return YOUTUBE_INVALID_MESSAGE;
-  const src = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) || trimmed.startsWith('//') ? trimmed : `https://${trimmed}`;
-  if (!editor.can().setYoutubeVideo({ src })) return YOUTUBE_INVALID_MESSAGE;
-  const { selection } = editor.state;
-  // 이미지 등 블록이 통째로 선택돼 있으면 바꾸지 않고 그 뒤에 넣는다
-  if (selection instanceof NodeSelection) {
-    editor.chain().focus().insertContentAt(selection.to, { type: 'youtube', attrs: { src } }).run();
-  } else {
-    editor.chain().focus().setYoutubeVideo({ src }).run();
-  }
-  placeCaretAfterBlock(editor, editor.state.selection.to, { newLine: true });
-  return null;
 }
 
 export function applyAlt(editor: Editor, input: string): void {

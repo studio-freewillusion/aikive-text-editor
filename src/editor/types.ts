@@ -53,6 +53,8 @@ export interface AikiveTextEditorProps {
   placeholder?: string;
   toolbar?: 'fixed' | 'bubble';
   htmlClassNames?: HtmlClassNames;
+  // 붙여넣은 주소를 영상 블록으로 넣을 수 있는 호스트 — 노드 규칙이 처음 만들 때 정해져 처음 값만 쓴다
+  embedHosts?: string[];
   onChange?: (html: string) => void;
   onUploadImage?: (file: File) => Promise<string>;
   onNotice?: (message: string, kind: NoticeKind) => void;
