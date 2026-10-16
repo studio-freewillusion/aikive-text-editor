@@ -1,4 +1,3 @@
-// 숫자만인 ID 는 공개 ID 로 바뀌기 전 옛 주소라 받지 않는다
 const VIDEO_ID = /^(?!\d+$)[A-Za-z0-9_-]{1,64}$/;
 const EMBED_PATH = /^\/embed\/watch\/([A-Za-z0-9_-]{1,64})$/;
 

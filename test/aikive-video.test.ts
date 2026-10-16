@@ -57,3 +57,15 @@ describe('래퍼 보존', () => {
     expect(parseContent('<p>a</p><div data-aikive-video=""><iframe src=""></iframe></div>')).toBe('<p>a</p>');
   });
 });
+
+describe('JSON 으로 들어온 영상 블록', () => {
+  it('허용 밖 src 는 iframe 을 그리지도 저장하지도 않는다', () => {
+    editor = new Editor({
+      element: document.createElement('div'),
+      extensions: buildExtensions(true, {}, undefined, undefined, HOSTS),
+      content: { type: 'doc', content: [{ type: 'aikiveVideo', attrs: { src: 'javascript:parent.alert(1)//' } }] },
+    });
+    expect(editor.view.dom.querySelector('iframe')).toBeNull();
+    expect(editor.getHTML()).not.toContain('javascript');
+  });
+});
