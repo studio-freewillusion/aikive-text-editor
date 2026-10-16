@@ -6,7 +6,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontFamily, FontSize, LineHeight, TextStyle } from '@tiptap/extension-text-style';
 import { Placeholder } from '@tiptap/extensions';
 import StarterKit from '@tiptap/starter-kit';
-import { AikiveVideo, ClampColumnWidth, CustomImage, CustomLink, InputPopoverBridge, StoredYoutube, UploadPlaceholder, VideoBlock } from '../extensions';
+import { AikiveVideo, ClampColumnWidth, CustomImage, CustomLink, InputPopoverBridge, PastedUrl, StoredYoutube, UploadPlaceholder, VideoBlock } from '../extensions';
 import { isAllowedEditorUri } from '../sanitize';
 import { attachFiles, type FileDeps } from './attach-files';
 import type { HtmlClassNames } from './types';
@@ -60,6 +60,7 @@ export function buildExtensions(
       },
     }),
     InputPopoverBridge,
+    PastedUrl,
     UploadPlaceholder,
     ...(editable && placeholder ? [Placeholder.configure({ placeholder })] : []),
   ];
