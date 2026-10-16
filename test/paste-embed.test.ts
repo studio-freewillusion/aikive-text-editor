@@ -65,6 +65,16 @@ describe('붙여넣은 주소 알림', () => {
     expect(ed.getHTML()).toMatch(/^<div data-aikive-video=""><iframe src="https:\/\/video\.example\.com\/embed\/watch\/abc123"[^>]*><\/iframe><\/div><p><\/p>$/);
   });
 
+  it('아무것도 들어가지 않은 붙여넣기는 윗줄에 같은 주소가 있어도 알리지 않는다', async () => {
+    const ed = create(`<p>${link(AIKIVE)}</p><p></p>`);
+    ed.commands.setTextSelection(ed.state.doc.content.size - 1);
+    const onPaste = vi.fn();
+    storageOf(ed).onPaste = onPaste;
+    pasteWithHtml(ed, AIKIVE, '<span></span>');
+    await flush();
+    expect(onPaste).not.toHaveBeenCalled();
+  });
+
   it('코드 블록 안에서는 붙인 글자를 자르지 않는다', async () => {
     const ed = create('<pre><code>x</code></pre>');
     ed.commands.setTextSelection(2);

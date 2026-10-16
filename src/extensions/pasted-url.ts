@@ -40,14 +40,16 @@ export const PastedUrl = Extension.create<Record<string, never>, PastedUrlStorag
             if (url === text || !SINGLE_URL.test(url) || view.state.selection.$from.parent.type.spec.code) return text;
             return url;
           },
-          handlePaste: (_view, event) => {
+          handlePaste: (view, event) => {
             const url = event.clipboardData?.getData('text/plain').trim() ?? '';
             if (!SINGLE_URL.test(url)) return false;
+            const before = view.state.doc;
             // false 를 돌려주면 ProseMirror 가 같은 흐름에서 붙여넣기를 반영하므로 그 뒤에 자리를 잰다
             queueMicrotask(() => {
               if (editor.isDestroyed) return;
               const { selection, doc } = editor.state;
-              if (!selection.empty) return;
+              // 아무것도 안 들어갔으면 윗줄의 같은 주소를 붙인 것으로 잘못 짚는다
+              if (!selection.empty || doc === before) return;
               const to = urlEnd(selection.$from, url);
               const from = to - url.length;
               // 코드 블록 안의 주소는 글자로 쓰려는 것이다
