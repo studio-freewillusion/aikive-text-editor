@@ -102,7 +102,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     immediatelyRender: false,
     editable,
     extensions: buildExtensions(editable, htmlClassNames, fileDeps, placeholder, initialEmbedHosts),
-    content: parseContent(initialContent),
+    content: parseContent(initialContent, initialEmbedHosts),
     editorProps: {
       attributes: { class: 'tiptap' },
       // 바깥에서 붙여넣은 영상은 새 첨부로 막는다 — 같은 에디터 안 복사·이동은 이 경로를 안 탄다
@@ -267,7 +267,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         setPopover(null);
         setPasteChoice(null);
         applySourceMode(false);
-        editor.commands.setContent(parseContent(value), { emitUpdate: false });
+        editor.commands.setContent(parseContent(value, initialEmbedHosts), { emitUpdate: false });
         // 되돌리기 기록을 새로 시작한다 — 남기면 되돌리기가 이전 내용을 끌어온다
         editor.view.updateState(EditorState.create({ doc: editor.state.doc, plugins: editor.state.plugins }));
         editor.view.dispatch(editor.state.tr);

@@ -68,4 +68,17 @@ describe('JSON 으로 들어온 영상 블록', () => {
     expect(editor.view.dom.querySelector('iframe')).toBeNull();
     expect(editor.getHTML()).not.toContain('javascript');
   });
+
+  it('명령으로 넣거나 바꾼 허용 밖 영상 블록은 바로 지운다', () => {
+    const ed = open('<p>a</p>');
+    ed.commands.insertContent({ type: 'aikiveVideo', attrs: { src: 'javascript:parent.alert(1)//' } });
+    expect(ed.getHTML()).not.toContain('data-aikive-video');
+    ed.commands.insertContent({ type: 'aikiveVideo', attrs: { src: 'https://video.example.com/embed/watch/abc123' } });
+    let pos = -1;
+    ed.state.doc.descendants((node, p) => {
+      if (node.type.name === 'aikiveVideo') pos = p;
+    });
+    ed.view.dispatch(ed.state.tr.setNodeMarkup(pos, undefined, { src: 'https://other.example.com/embed/watch/abc123' }));
+    expect(ed.getHTML()).not.toContain('data-aikive-video');
+  });
 });

@@ -17,6 +17,22 @@ const editorOf = async (container: HTMLElement) => {
 const pause = () => act(() => new Promise((r) => setTimeout(r, 600)));
 
 describe('AikiveTextEditor', () => {
+  it('JSON 본문의 허용 밖 영상 블록은 불러올 때 지운다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    const json = JSON.stringify({
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'a' }] },
+        { type: 'aikiveVideo', attrs: { src: 'javascript:parent.alert(1)//' } },
+        { type: 'aikiveVideo', attrs: { src: 'https://video.example.com/embed/watch/abc123' } },
+      ],
+    });
+    render(<AikiveTextEditor ref={ref} initialContent={json} embedHosts={['video.example.com']} />);
+    await waitFor(() => expect(ref.current?.getHTML()).toContain('embed/watch/abc123'));
+    expect(ref.current!.getHTML().match(/data-aikive-video/g)).toHaveLength(1);
+    expect(ref.current!.getHTML()).not.toContain('javascript');
+  });
+
   it('embedHosts 를 넘기면 영상 블록을 열고 저장한다', async () => {
     const ref = createRef<AikiveTextEditorHandle>();
     const html =
