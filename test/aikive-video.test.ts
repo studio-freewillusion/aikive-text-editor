@@ -81,4 +81,18 @@ describe('JSON 으로 들어온 영상 블록', () => {
     ed.view.dispatch(ed.state.tr.setNodeMarkup(pos, undefined, { src: 'https://other.example.com/embed/watch/abc123' }));
     expect(ed.getHTML()).not.toContain('data-aikive-video');
   });
+
+  it('허용 밖 블록만 있던 인용은 빈 문단으로 채워 문서 규칙을 지킨다', () => {
+    const json = JSON.stringify({
+      type: 'doc',
+      content: [{ type: 'blockquote', content: [{ type: 'aikiveVideo', attrs: { src: 'javascript:parent.alert(1)//' } }] }],
+    });
+    editor = new Editor({
+      element: document.createElement('div'),
+      extensions: buildExtensions(true, {}, undefined, undefined, HOSTS),
+      content: parseContent(json, HOSTS),
+    });
+    expect(() => editor!.state.doc.check()).not.toThrow();
+    expect(editor.getHTML()).toContain('<blockquote><p></p></blockquote>');
+  });
 });
