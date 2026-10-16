@@ -465,3 +465,21 @@ test.describe('영상 주소 붙여넣기', () => {
     await expect(html(page)).toContainText('다음');
   });
 });
+
+test('줄간격을 지정한 문단은 문단 사이 간격도 같은 비율로 바뀐다(편집 화면과 보기 화면 같게)', async ({ page }) => {
+  await open(
+    page,
+    '<p>기본</p><p>기본 다음</p><p><span style="line-height: 2">두 배</span></p><p><span style="line-height: 1">한 배</span></p><ul><li><p>a</p><p><span style="line-height: 2">b</span></p></li></ul>',
+  );
+  for (const area of ['.ProseMirror', '[data-testid="viewer"] .tiptap']) {
+    const gaps = await page.locator(area).first().evaluate((root) =>
+      [...root.querySelectorAll(':scope > p, li p')].map((p) => parseFloat(getComputedStyle(p).marginTop)),
+    );
+    const rem = 16;
+    // 기본은 그대로, 줄간격 2·1 은 기본 1.65 대비 비율만큼, 목록 안 문단도 같은 비율
+    expect(gaps[1], area).toBeCloseTo(0.4 * rem, 1);
+    expect(gaps[2], area).toBeCloseTo((0.4 * rem * 2) / 1.65, 1);
+    expect(gaps[3], area).toBeCloseTo((0.4 * rem * 1) / 1.65, 1);
+    expect(gaps[5], area).toBeCloseTo((0.15 * rem * 2) / 1.65, 1);
+  }
+});
