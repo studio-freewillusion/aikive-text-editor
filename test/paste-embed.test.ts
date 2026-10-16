@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { embedTargetOf, insertPastedEmbed } from '../src/editor/paste-embed';
 import { buildExtensions } from '../src/editor/use-editor-setup';
 import type { PastedUrlStorage } from '../src/extensions';
-import { pastePlainText } from './paste';
+import { pastePlainText, pasteWithHtml } from './paste';
 
 const HOSTS = ['video.example.com'];
 const AIKIVE = 'https://video.example.com/watch?v=abc123';
@@ -45,6 +45,21 @@ describe('붙여넣은 주소 알림', () => {
     expect(onPaste).toHaveBeenCalledWith({ from: 1, to: 1 + AIKIVE.length, url: AIKIVE });
     expect(ed.state.doc.childCount).toBe(1);
     expect(ed.getHTML()).toContain(`href="${AIKIVE}"`);
+  });
+
+  it('HTML 과 함께 붙여넣으면 HTML(링크·서식)을 그대로 쓴다', async () => {
+    const ed = create('<p></p>');
+    pasteWithHtml(ed, `${AIKIVE}\n`, `<p data-pm-slice="1 1 []"><a href="${AIKIVE}">${AIKIVE}</a></p><p></p>`);
+    await flush();
+    expect(ed.getHTML()).toContain(`href="${AIKIVE}"`);
+  });
+
+  it('코드 블록 안에서는 붙인 글자를 자르지 않는다', async () => {
+    const ed = create('<pre><code>x</code></pre>');
+    ed.commands.setTextSelection(2);
+    pastePlainText(ed, `    ${AIKIVE}\n`);
+    await flush();
+    expect(ed.state.doc.textContent).toContain(`    ${AIKIVE}\n`);
   });
 
   it.each([`보세요 ${AIKIVE}`, 'hello', `${AIKIVE} ${YT}`])('「%s」 는 알리지 않는다', async (text) => {
