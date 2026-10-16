@@ -6,7 +6,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontFamily, FontSize, LineHeight, TextStyle } from '@tiptap/extension-text-style';
 import { Placeholder } from '@tiptap/extensions';
 import StarterKit from '@tiptap/starter-kit';
-import { ClampColumnWidth, CustomImage, CustomLink, InputPopoverBridge, StoredYoutube, UploadPlaceholder, VideoBlock } from '../extensions';
+import { AikiveVideo, ClampColumnWidth, CustomImage, CustomLink, InputPopoverBridge, StoredYoutube, UploadPlaceholder, VideoBlock } from '../extensions';
 import { isAllowedEditorUri } from '../sanitize';
 import { attachFiles, type FileDeps } from './attach-files';
 import type { HtmlClassNames } from './types';
@@ -16,6 +16,7 @@ export function buildExtensions(
   classNames: HtmlClassNames = {},
   fileDeps: () => FileDeps = () => ({ notice: () => {} }),
   placeholder?: string,
+  embedHosts: string[] = [],
 ): AnyExtension[] {
   return [
     StarterKit.configure({ link: false, trailingNode: editable ? undefined : false }),
@@ -45,6 +46,7 @@ export function buildExtensions(
       HTMLAttributes: classNames.youtube ? { class: classNames.youtube } : {},
     }),
     VideoBlock,
+    AikiveVideo.configure({ hosts: embedHosts }),
     FileHandler.configure({
       // 형식 목록을 두지 않는다 — 목록 밖 파일은 드롭이 처리 안 돼 브라우저가 파일을 연다. 거르기는 canAttach 가 한다
       onDrop: (ed, files, pos) => {

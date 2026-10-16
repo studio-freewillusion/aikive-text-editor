@@ -17,6 +17,16 @@ const editorOf = async (container: HTMLElement) => {
 const pause = () => act(() => new Promise((r) => setTimeout(r, 600)));
 
 describe('AikiveTextEditor', () => {
+  it('embedHosts 를 넘기면 영상 블록을 열고 저장한다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    const html =
+      '<div data-aikive-video=""><iframe src="https://video.example.com/embed/watch/abc123"></iframe></div>';
+    render(<AikiveTextEditor ref={ref} initialContent={html} embedHosts={['video.example.com']} />);
+    await waitFor(() =>
+      expect(ref.current?.getHTML()).toContain('src="https://video.example.com/embed/watch/abc123" allow='),
+    );
+  });
+
   it('빈 에디터의 onChange 값은 빈 문자열', async () => {
     const onChange = vi.fn();
     const { container } = render(<AikiveTextEditor initialContent="<p>a</p>" onChange={onChange} />);

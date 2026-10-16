@@ -290,6 +290,13 @@
     height: 360px;
   }
 }
+.tiptap [data-aikive-video] iframe {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
 .tiptap .selectedCell::after {
   position: absolute;
   inset: 0;

@@ -34,6 +34,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     placeholder,
     toolbar = 'fixed',
     htmlClassNames,
+    embedHosts,
     onChange,
     onUploadImage,
     onNotice,
@@ -71,6 +72,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   };
   const [coarsePointer, setCoarsePointer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [initialEmbedHosts] = useState(() => embedHosts ?? []);
   const features = { ...DEFAULT_FEATURES, ...featuresProp };
   const [popover, setPopover] = useState<PopoverKind | null>(null);
   const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
@@ -92,7 +94,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   const editor = useEditor({
     immediatelyRender: false,
     editable,
-    extensions: buildExtensions(editable, htmlClassNames, fileDeps, placeholder),
+    extensions: buildExtensions(editable, htmlClassNames, fileDeps, placeholder, initialEmbedHosts),
     content: parseContent(initialContent),
     editorProps: {
       attributes: { class: 'tiptap' },
