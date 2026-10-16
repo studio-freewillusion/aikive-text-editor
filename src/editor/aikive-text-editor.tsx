@@ -8,18 +8,22 @@ import { GripVertical } from '../ui/icons';
 import { shouldShowBubbleMenu } from '../ui/should-show-bubble-menu';
 import { Toolbar } from '../ui/toolbar';
 import { InputPopover, type PopoverAnchor } from '../ui/input-popover';
+import { PasteChoice } from '../ui/paste-choice';
 import {
   openInputPopover,
   activeUploads,
   uploadPending,
   uploadPlaceholderKey,
   type InputPopoverBridgeStorage,
+  type PastedUrlRange,
+  type PastedUrlStorage,
   type PopoverKind,
   type UploadPlaceholderStorage,
 } from '../extensions';
 import { parseContent } from './parse-content';
 import { attachFiles, IMAGE_MIME_TYPES, type FileDeps } from './attach-files';
 import { applySourceContent, SOURCE_HTML_ERROR_MESSAGE } from './source-mode';
+import { embedTargetOf, insertPastedEmbed, type EmbedTarget } from './paste-embed';
 import { buildExtensions } from './use-editor-setup';
 import { DEFAULT_FEATURES, type AikiveTextEditorHandle, type AikiveTextEditorProps, type NoticeKind, type Snapshot } from './types';
 
@@ -75,6 +79,9 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   const [initialEmbedHosts] = useState(() => embedHosts ?? []);
   const features = { ...DEFAULT_FEATURES, ...featuresProp };
   const [popover, setPopover] = useState<PopoverKind | null>(null);
+  const [pasteChoice, setPasteChoice] = useState<{ range: PastedUrlRange; target: EmbedTarget } | null>(null);
+  const youtubeEnabledRef = useRef(features.youtube);
+  youtubeEnabledRef.current = features.youtube;
   const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
   const linkEnabledRef = useRef(features.link);
   linkEnabledRef.current = features.link;
@@ -107,7 +114,10 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   // useEditor 는 옵션이 바뀌어도 편집 가능 여부를 그대로 둔다
   useEffect(() => {
     if (editor && editor.isEditable !== editable) editor.setEditable(editable);
-    if (!editable) setPopover(null);
+    if (!editable) {
+      setPopover(null);
+      setPasteChoice(null);
+    }
   }, [editor, editable]);
 
   useEffect(() => {
@@ -118,6 +128,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       // 이미지 조작 바는 pos 를 넘긴다 — 단축키·툴바만 link 기능 설정을 따른다
       if (kind === 'link' && pos === undefined && !linkEnabledRef.current) return false;
       if (pos !== undefined) editor.commands.setNodeSelection(pos);
+      setPasteChoice(null);
       setPopover(kind);
       return true;
     };
@@ -139,6 +150,19 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       if (storage.pending > 0) uploadingChangeRef.current?.(false);
     };
   }, [editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const storage = (editor.storage as unknown as { pastedUrl: PastedUrlStorage }).pastedUrl;
+    storage.onPaste = (range) => {
+      if (!editor.isEditable || sourceModeRef.current) return;
+      const target = embedTargetOf(range.url, { youtube: youtubeEnabledRef.current, hosts: initialEmbedHosts });
+      if (target) setPasteChoice({ range, target });
+    };
+    return () => {
+      storage.onPaste = null;
+    };
+  }, [editor, initialEmbedHosts]);
 
   useEffect(() => {
     if (!editor) return;
@@ -196,12 +220,19 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     [editor],
   );
 
+  const closePasteChoice = useCallback(() => setPasteChoice(null), []);
+  const embedPasted = useCallback(() => {
+    if (editor && pasteChoice) insertPastedEmbed(editor, pasteChoice.range, pasteChoice.target);
+    setPasteChoice(null);
+  }, [editor, pasteChoice]);
+
   const setSourceMode = (on: boolean) => {
     if (!editor || on === sourceModeRef.current) return;
     // 들어가면 본문이 숨어 올리던 이미지를 넣을 자리가 사라진다
     if (on && uploadPending(editor) > 0) return;
     if (on) {
       setPopover(null);
+      setPasteChoice(null);
       editor.commands.blur();
       updateSourceText(editor.getHTML());
       sourceEntryRef.current = sourceTextRef.current;
@@ -234,6 +265,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         if (!editor) return;
         // 열린 입력 창은 예전 본문의 위치를 들고 있어 새 본문에 잘못 적용된다
         setPopover(null);
+        setPasteChoice(null);
         applySourceMode(false);
         editor.commands.setContent(parseContent(value), { emitUpdate: false });
         // 되돌리기 기록을 새로 시작한다 — 남기면 되돌리기가 이전 내용을 끌어온다
@@ -246,6 +278,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         // 에디터가 다시 만들어졌으면 예전 상태의 플러그인이 맞지 않아 되살리지 않는다
         if (!editor || snapshot.state.schema !== editor.schema) return false;
         setPopover(null);
+        setPasteChoice(null);
         applySourceMode(false);
         // 플러그인은 지금 것을 쓴다 — 스냅샷 뒤에 붙은 말풍선 툴바 등이 빠지면 안 된다
         editor.view.updateState(snapshot.state.reconfigure({ plugins: editor.state.plugins }));
@@ -337,6 +370,9 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       )}
       {editable && editor && popover && (
         <InputPopover editor={editor} kind={popover} anchor={anchorOf} onClose={closePopover} />
+      )}
+      {editable && editor && pasteChoice && (
+        <PasteChoice editor={editor} anchor={anchorOf} onEmbed={embedPasted} onClose={closePasteChoice} />
       )}
       <div hidden={sourceMode}>
         <EditorContent editor={editor} className={contentClassName} />
