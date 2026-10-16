@@ -54,6 +54,17 @@ describe('붙여넣은 주소 알림', () => {
     expect(ed.getHTML()).toContain(`href="${AIKIVE}"`);
   });
 
+  it('에디터끼리 줄째 복사해 붙여도(끝 빈 줄) 윗줄의 주소를 알린다', async () => {
+    const ed = create('<p></p>');
+    const onPaste = vi.fn();
+    storageOf(ed).onPaste = onPaste;
+    pasteWithHtml(ed, `${AIKIVE}\n`, `<p data-pm-slice="1 1 []"><a href="${AIKIVE}">${AIKIVE}</a></p><p></p>`);
+    await flush();
+    expect(onPaste).toHaveBeenCalledWith({ from: 1, to: 1 + AIKIVE.length, url: AIKIVE });
+    expect(insertPastedEmbed(ed, onPaste.mock.calls[0][0], { type: 'aikiveVideo', src: EMBED_SRC })).toBe(true);
+    expect(ed.getHTML()).toMatch(/^<div data-aikive-video=""><iframe src="https:\/\/video\.example\.com\/embed\/watch\/abc123"[^>]*><\/iframe><\/div><p><\/p>$/);
+  });
+
   it('코드 블록 안에서는 붙인 글자를 자르지 않는다', async () => {
     const ed = create('<pre><code>x</code></pre>');
     ed.commands.setTextSelection(2);
