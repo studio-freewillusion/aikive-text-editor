@@ -8,6 +8,7 @@ export interface AikiveTextViewerProps {
   lazyMedia?: boolean;
   resolveImageSrc?: ImageSrcResolver;
   extraIframeHosts?: string[];
+  embedHosts?: string[];
   className?: string;
 }
 
@@ -19,6 +20,7 @@ export function AikiveTextViewer({
   lazyMedia,
   resolveImageSrc = identity,
   extraIframeHosts,
+  embedHosts,
   className,
 }: AikiveTextViewerProps) {
   if (!content) return null;
@@ -28,7 +30,7 @@ export function AikiveTextViewer({
 
   return (
     <div className={rootClassName}>
-      {doc ? renderLegacyJson(doc, options) : renderHtml(content, options, extraIframeHosts)}
+      {doc ? renderLegacyJson(doc, options) : renderHtml(content, options, extraIframeHosts, embedHosts)}
     </div>
   );
 }

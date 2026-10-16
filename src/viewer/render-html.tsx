@@ -7,8 +7,9 @@ export function renderHtml(
   html: string,
   { onClickImage, lazyMedia, resolveImageSrc }: RenderOptions,
   extraIframeHosts: string[] = [],
+  embedHosts: string[] = [],
 ): React.ReactNode {
-  return parse(sanitizeRichHtml(html, { lazyMedia, extraIframeHosts }), {
+  return parse(sanitizeRichHtml(html, { lazyMedia, extraIframeHosts, embedHosts }), {
     replace: (node: DOMNode) => {
       if (node.type !== 'tag') return undefined;
       const el = node as Element;
