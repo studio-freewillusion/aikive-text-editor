@@ -5,6 +5,7 @@ import { AikiveTextViewer } from '../../src/viewer';
 import '../../src/styles/index.css';
 
 const params = new URLSearchParams(location.search);
+const EMBED_HOSTS = ['video.example.com'];
 
 function Demo() {
   const ref = useRef<AikiveTextEditorHandle>(null);
@@ -24,6 +25,7 @@ function Demo() {
         onChange={setHtml}
         onUploadImage={async (f) => URL.createObjectURL(f)}
         onNotice={(m) => setNotices((n) => [...n, m])}
+        embedHosts={EMBED_HOSTS}
       />
       <output data-testid="html">{html}</output>
       <ul data-testid="notices">
@@ -32,7 +34,7 @@ function Demo() {
         ))}
       </ul>
       <section data-testid="viewer">
-        <AikiveTextViewer content={html} />
+        <AikiveTextViewer content={html} embedHosts={EMBED_HOSTS} />
       </section>
     </main>
   );
