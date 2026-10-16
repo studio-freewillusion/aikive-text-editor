@@ -36,6 +36,17 @@ describe('붙여넣은 주소 알림', () => {
     expect(ed.getHTML()).toContain(`href="${AIKIVE}"`);
   });
 
+  it.each([`${AIKIVE}\n`, `${AIKIVE}\r\n`, `${AIKIVE} `, ` ${AIKIVE}`])('앞뒤 공백·줄바꿈이 붙어도 자른 주소만 넣고 알린다 (%j)', async (text) => {
+    const ed = create('<p></p>');
+    const onPaste = vi.fn();
+    storageOf(ed).onPaste = onPaste;
+    pastePlainText(ed, text);
+    await flush();
+    expect(onPaste).toHaveBeenCalledWith({ from: 1, to: 1 + AIKIVE.length, url: AIKIVE });
+    expect(ed.state.doc.childCount).toBe(1);
+    expect(ed.getHTML()).toContain(`href="${AIKIVE}"`);
+  });
+
   it.each([`보세요 ${AIKIVE}`, 'hello', `${AIKIVE} ${YT}`])('「%s」 는 알리지 않는다', async (text) => {
     const ed = create('<p></p>');
     const onPaste = vi.fn();

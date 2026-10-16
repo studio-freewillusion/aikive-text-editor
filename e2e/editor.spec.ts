@@ -433,6 +433,13 @@ test.describe('영상 주소 붙여넣기', () => {
     await expect(page.locator('[data-testid="viewer"] [data-aikive-video] iframe')).toHaveAttribute('src', EMBED_SRC);
   });
 
+  test('끝에 줄바꿈이 붙은 주소도 창이 뜨고 줄이 늘지 않는다', async ({ page }) => {
+    await pasteText(page, `${AIKIVE}\n`);
+    await expect(menu(page)).toBeVisible();
+    await expect(page.locator('.ProseMirror > p')).toHaveCount(1);
+    await expect(html(page)).toContainText(`href="${AIKIVE}"`);
+  });
+
   test('↑ 와 Enter 로 플레이어를 넣는다', async ({ page }) => {
     await pasteText(page, AIKIVE);
     await expect(menu(page)).toBeVisible();
