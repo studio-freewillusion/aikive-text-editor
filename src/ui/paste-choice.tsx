@@ -63,8 +63,9 @@ export function PasteChoice({ editor, anchor, onEmbed, onClose }: PasteChoicePro
   // 포커스는 본문에 둔 채 고른다. 바깥 다이얼로그는 document 캡처로 Esc 를 먼저 받으므로 window 캡처에서 끊는다
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // 수정 키가 붙은 키(Shift+Enter 줄바꿈, ⌘+Enter 등)는 쓰는 쪽 동작이라 넘긴다
-      if (!editor.view.dom.contains(e.target as Node) || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!editor.view.dom.contains(e.target as Node)) return;
+      // 수정 키가 붙은 Enter·화살표(Shift+Enter 줄바꿈, ⌘+Enter 등)는 쓰는 쪽 동작이라 넘긴다. Esc 는 늘 창만 닫는다
+      if (e.key !== 'Escape' && (e.shiftKey || e.metaKey || e.ctrlKey || e.altKey)) return;
       const stop = () => {
         e.preventDefault();
         e.stopPropagation();

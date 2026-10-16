@@ -140,6 +140,20 @@ describe('붙여넣기 선택 창', () => {
     expect(ref.current!.getHTML()).not.toContain('data-aikive-video');
   });
 
+  it('수정 키가 붙은 Esc 도 창만 닫고 바깥으로 넘기지 않는다', async () => {
+    const { ed } = await setup();
+    const outer = vi.fn();
+    document.addEventListener('keydown', outer, true);
+    try {
+      await paste(ed, AIKIVE);
+      fireEvent.keyDown(ed.view.dom, { key: 'Escape', shiftKey: true });
+      expect(menu()).toBeNull();
+      expect(outer).not.toHaveBeenCalled();
+    } finally {
+      document.removeEventListener('keydown', outer, true);
+    }
+  });
+
   it('보조기술이 창과 고른 항목을 알 수 있게 본문에 연결하고, 닫으면 뗀다', async () => {
     const { ed } = await setup();
     await paste(ed, AIKIVE);
