@@ -35,7 +35,8 @@ export const PastedUrl = Extension.create<Record<string, never>, PastedUrlStorag
               const { selection, doc } = editor.state;
               const to = selection.to;
               const from = to - url.length;
-              if (!selection.empty || from < 0 || doc.textBetween(from, to) !== url) return;
+              // 코드 블록 안의 주소는 글자로 쓰려는 것이다
+              if (!selection.empty || selection.$from.parent.type.spec.code || from < 0 || doc.textBetween(from, to) !== url) return;
               storage.onPaste?.({ from, to, url });
             });
             if (raw === url) return false;

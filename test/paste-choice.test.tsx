@@ -130,4 +130,43 @@ describe('붙여넣기 선택 창', () => {
     await paste(ed, text);
     expect(menu()).toBeNull();
   });
+
+  it('수정 키가 눌린 Enter 는 가로채지 않는다', async () => {
+    const { ref, ed } = await setup();
+    await paste(ed, AIKIVE);
+    fireEvent.keyDown(ed.view.dom, { key: 'ArrowUp' });
+    fireEvent.keyDown(ed.view.dom, { key: 'Enter', shiftKey: true });
+    fireEvent.keyDown(ed.view.dom, { key: 'Enter', metaKey: true });
+    expect(ref.current!.getHTML()).not.toContain('data-aikive-video');
+  });
+
+  it('보조기술이 창과 고른 항목을 알 수 있게 본문에 연결하고, 닫으면 뗀다', async () => {
+    const { ed } = await setup();
+    await paste(ed, AIKIVE);
+    const dom = ed.view.dom;
+    expect(dom.getAttribute('aria-controls')).toBe(screen.getByRole('menu').id);
+    expect(dom.getAttribute('aria-activedescendant')).toBe(screen.getByRole('menuitem', { name: '링크로 두기' }).id);
+    fireEvent.keyDown(dom, { key: 'ArrowUp' });
+    expect(dom.getAttribute('aria-activedescendant')).toBe(screen.getByRole('menuitem', { name: '플레이어로 넣기' }).id);
+    fireEvent.keyDown(dom, { key: 'Escape' });
+    expect(dom.hasAttribute('aria-controls')).toBe(false);
+    expect(dom.hasAttribute('aria-activedescendant')).toBe(false);
+  });
+
+  it('플레이어로 넣은 뒤 되돌리면 붙인 링크로 돌아간다', async () => {
+    const { ref, ed } = await setup();
+    await paste(ed, AIKIVE);
+    fireEvent.click(screen.getByRole('menuitem', { name: '플레이어로 넣기' }));
+    act(() => {
+      ed.commands.undo();
+    });
+    expect(ref.current!.getHTML()).not.toContain('data-aikive-video');
+    expect(ref.current!.getHTML()).toContain(`href="${AIKIVE}"`);
+  });
+
+  it('코드 블록 안에 붙인 주소는 창을 띄우지 않는다', async () => {
+    const { ed } = await setup({ initialContent: '<pre><code>x</code></pre>' });
+    await paste(ed, AIKIVE);
+    expect(menu()).toBeNull();
+  });
 });

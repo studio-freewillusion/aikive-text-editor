@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/core';
 import { isValidYoutubeUrl } from '@tiptap/extension-youtube';
+import { closeHistory } from '@tiptap/pm/history';
 import type { PastedUrlRange } from '../extensions';
 import { aikiveEmbedSrc, parseAikiveVideoUrl } from '../sanitize';
 import { placeCaretAfterBlock } from './caret-after';
@@ -22,6 +23,8 @@ export function insertPastedEmbed(editor: Editor, { from, to, url }: PastedUrlRa
   if (to > doc.content.size || doc.textBetween(from, to) !== url) return false;
   const $from = doc.resolve(from);
   const node = { type: target.type, attrs: { src: target.src } };
+  // 붙여넣기와 같은 되돌리기 묶음이면 ⌘Z 한 번에 붙인 링크까지 사라진다
+  editor.view.dispatch(closeHistory(editor.state.tr));
   const start = $from.before();
   const end = $from.after();
   const chain = editor.chain().focus();
