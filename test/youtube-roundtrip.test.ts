@@ -2,6 +2,7 @@ import { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildExtensions } from '../src/editor/use-editor-setup';
 import { parseContent } from '../src/editor/parse-content';
+import { pastePlainText } from './paste';
 
 let editor: Editor | undefined;
 const open = (content: string) => {
@@ -25,5 +26,14 @@ describe('JSON 이지만 문서가 아닌 본문은 지금 에디터처럼 다�
   it('JSON 숫자 값은 빈 문서로 연다', () => {
     const html = open('132');
     expect(html).not.toContain('132');
+  });
+});
+
+describe('유튜브 주소 붙여넣기', () => {
+  it('붙여넣어도 바로 유튜브 블록으로 바꾸지 않는다', () => {
+    editor = new Editor({ element: document.createElement('div'), extensions: buildExtensions(true), content: '<p></p>' });
+    pastePlainText(editor, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    expect(editor.getHTML()).not.toContain('data-youtube-video');
+    expect(editor.getText()).toContain('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
   });
 });

@@ -18,7 +18,7 @@ export interface ToolbarProps {
   uploading?: boolean;
   /** 말풍선 툴바처럼 툴바 상자 폭이 내용에 맞춰질 때, 들어갈 수 있는 폭의 기준 요소 */
   boundary?: HTMLElement | null;
-  /** 링크·유튜브 입력 창이 열려 있는지 — 단축키로 열려도 더 보기 상자를 닫는다 */
+  /** 링크·대체 텍스트 입력 창이 열려 있는지 — 단축키로 열려도 더 보기 상자를 닫는다 */
   popoverOpen?: boolean;
 }
 
@@ -220,7 +220,6 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
   const insertOptions = [
     features.table && !state.isTable && { value: 'table', label: '표' },
     features.blocks && { value: 'hr', label: '구분선' },
-    features.youtube && { value: 'youtube', label: '유튜브' },
     features.image && onPickImage && { value: 'image', label: '이미지' },
   ].filter((o): o is { value: string; label: string } => !!o);
   const insert = (value: string) => {
@@ -237,7 +236,6 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
     }
     if (value === 'table') chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (value === 'hr') chain().setHorizontalRule().run();
-    else if (value === 'youtube') onOpenPopover('youtube');
     else if (value === 'image') onPickImage?.();
   };
   // 좁은 화면에서 툴바 상자 오른쪽 밖으로 나가지 않게 연 뒤 폭을 재서 당긴다

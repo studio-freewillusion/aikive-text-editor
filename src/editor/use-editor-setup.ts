@@ -40,7 +40,9 @@ export function buildExtensions(
     }),
     ClampColumnWidth,
     CustomImage,
+    // 붙여넣은 유튜브 주소는 선택 창에서 플레이어로 넣을지 고른다
     StoredYoutube.configure({
+      addPasteHandler: false,
       controls: false,
       nocookie: true,
       HTMLAttributes: classNames.youtube ? { class: classNames.youtube } : {},

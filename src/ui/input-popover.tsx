@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/core';
 import type { Transaction } from '@tiptap/pm/state';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { ALT_MAX_LENGTH, applyAlt, applyLink, currentLink, insertYoutube, removeLink } from '../editor/popover-actions';
+import { ALT_MAX_LENGTH, applyAlt, applyLink, currentLink, removeLink } from '../editor/popover-actions';
 import type { PopoverKind } from '../extensions/input-popover-bridge';
 
 export interface PopoverAnchor {
@@ -26,7 +26,7 @@ export function placePopover(
   return { top, left };
 }
 
-const LABELS: Record<PopoverKind, string> = { link: '링크', youtube: '유튜브', alt: '대체 텍스트' };
+const LABELS: Record<PopoverKind, string> = { link: '링크', alt: '대체 텍스트' };
 
 export interface InputPopoverProps {
   editor: Editor;
@@ -122,7 +122,6 @@ export function InputPopover({ editor, kind, anchor, onClose }: InputPopoverProp
   const done = () => onClose(true);
   let body: ReactNode = null;
   if (kind === 'link') body = <LinkForm editor={editor} prepare={restoreSelection} onDone={done} />;
-  if (kind === 'youtube') body = <YoutubeForm editor={editor} prepare={restoreSelection} onDone={done} />;
   if (kind === 'alt') body = <AltForm editor={editor} prepare={restoreSelection} onDone={done} />;
   // 처음부터 숨겨 두면 autoFocus 가 실패한다 — 0,0 에 그린 뒤 화면에 보이기 전에 layout effect 가 옮긴다
   const style = pos ?? { top: 0, left: 0 };
@@ -241,36 +240,6 @@ function LinkForm({ editor, prepare, onDone }: FormProps) {
         )}
         <button type="button" className="is-primary" onClick={apply}>
           적용
-        </button>
-      </div>
-    </>
-  );
-}
-
-function YoutubeForm({ editor, prepare, onDone }: FormProps) {
-  const [url, setUrl] = useState('');
-  const [error, setError] = useState('');
-  const apply = () => {
-    prepare();
-    const message = insertYoutube(editor, url);
-    if (message) setError(message);
-    else onDone();
-  };
-  return (
-    <>
-      <PopoverField
-        label="유튜브 주소"
-        value={url}
-        error={error}
-        onChange={(value) => {
-          setUrl(value);
-          setError('');
-        }}
-        onEnter={apply}
-      />
-      <div className="aikive-popover__actions">
-        <button type="button" className="is-primary" onClick={apply}>
-          넣기
         </button>
       </div>
     </>

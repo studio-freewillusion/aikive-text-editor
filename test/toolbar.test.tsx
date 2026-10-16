@@ -228,13 +228,11 @@ describe('Toolbar', () => {
     const onOpenPopover = vi.fn();
     const onPickImage = vi.fn();
     renderToolbar({ onOpenPopover, onPickImage });
-    expect(optionValues('넣기')).toEqual(['', 'table', 'hr', 'youtube', 'image']);
+    expect(optionValues('넣기')).toEqual(['', 'table', 'hr', 'image']);
     const user = userEvent.setup();
     await user.selectOptions(screen.getByLabelText('넣기'), 'hr');
     expect(editor.getHTML()).toContain('<hr>');
     expect(screen.getByLabelText('넣기')).toHaveValue('');
-    await user.selectOptions(screen.getByLabelText('넣기'), 'youtube');
-    expect(onOpenPopover).toHaveBeenCalledWith('youtube');
     await user.selectOptions(screen.getByLabelText('넣기'), 'image');
     expect(onPickImage).toHaveBeenCalled();
     await user.selectOptions(screen.getByLabelText('넣기'), 'table');
@@ -304,9 +302,9 @@ describe('Toolbar', () => {
   it('넣기 항목은 기능 설정을 따르고, 모두 꺼지면 사라진다', () => {
     createEditor('<p>a</p>');
     const { unmount } = renderToolbar({ features: { ...DEFAULT_FEATURES, image: false } });
-    expect(optionValues('넣기')).toEqual(['', 'table', 'hr', 'youtube']);
+    expect(optionValues('넣기')).toEqual(['', 'table', 'hr']);
     unmount();
-    renderToolbar({ features: { ...DEFAULT_FEATURES, table: false, blocks: false, youtube: false } });
+    renderToolbar({ features: { ...DEFAULT_FEATURES, table: false, blocks: false } });
     expect(screen.queryByLabelText('넣기')).toBeNull();
   });
 
