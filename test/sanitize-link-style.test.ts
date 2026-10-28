@@ -14,6 +14,12 @@ describe('sanitizeLinkStyle', () => {
   });
 });
 
+describe('sanitizeLinkStyle — 브라우저', () => {
+  it('브라우저가 풀어 읽는 이스케이프 글꼴 이름은 남긴다', () => {
+    expect(sanitizeLinkStyle("font-family: '\\5FAE\\8F6F'; color: red")).toContain('font-family');
+  });
+});
+
 describe('sanitizeLinkStyle — document 없는 서버', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

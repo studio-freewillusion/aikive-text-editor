@@ -129,6 +129,10 @@
 .tiptap a:not([style*=color]) {
   color: var(--aikive-text-link, #46add4);
 }
+/* 뷰어 루트가 영역 밖을 잘라 가장자리 링크의 포커스 테두리가 가려지지 않게 안쪽에 그린다 */
+.tiptap a:focus-visible {
+  outline-offset: -2px;
+}
 .tiptap strong {
   font-weight: 700;
 }

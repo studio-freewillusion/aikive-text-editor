@@ -118,10 +118,12 @@ const ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
 
 const FONT_WEIGHT_PATTERN = /^(normal|bold|bolder|lighter|[1-9]00)$/i;
 
-// 역슬래시 이스케이프(u\72l( 등)는 문자열 검사를 우회해 브라우저에서 url( 로 읽힌다
 const isSafeCssValue = (value: string) => {
-    return !!value && !value.includes('\\') && !UNSAFE_CSS_VALUE_PATTERN.test(value);
+    return !!value && !UNSAFE_CSS_VALUE_PATTERN.test(value);
 };
+
+// 브라우저 정규화를 거치지 않는 경로에서 역슬래시 이스케이프(u\72l( 등)는 문자열 검사를 우회해 url( 로 읽힌다
+const isSafeRawCssValue = (value: string) => isSafeCssValue(value) && !value.includes('\\');
 
 const sanitizePropertyValue = (property: string, value: string) => {
     const trimmedValue = value.trim();
@@ -131,6 +133,10 @@ const sanitizePropertyValue = (property: string, value: string) => {
     }
 
     if (typeof document === 'undefined') {
+        if (!isSafeRawCssValue(trimmedValue)) {
+            return null;
+        }
+
         const allowedValues = ENUM_VALUE_WHITELISTS[property];
 
         if (allowedValues && !allowedValues.has(trimmedValue.toLowerCase())) {
@@ -156,9 +162,7 @@ const sanitizePropertyValue = (property: string, value: string) => {
     }
 
     if (property === 'font-weight') {
-        const normalized = normalizedValue.toLowerCase();
-
-        if (!FONT_WEIGHT_PATTERN.test(normalized)) {
+        if (!FONT_WEIGHT_PATTERN.test(normalizedValue)) {
             return null;
         }
     }
@@ -247,24 +251,16 @@ const BODY_ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
 };
 
 // 음수·calc 값은 앞쪽 화면(머리글 등) 위로 끌어올려 덮는 데 쓸 수 있어 0 이상 길이와 auto 만 받는다
-// inherit 는 감싸는 사이트 요소의 음수 margin 을 물려받을 수 있어 받지 않는다
-const MARGIN_LENGTH = String.raw`(?:auto|0|(?:\d+(?:\.\d+)?|\.\d+)(?:px|em|rem|%|pt|vh|vw|vmin|vmax|ch|ex))`;
-const MARGIN_VALUE_PATTERN = new RegExp(`^(?:initial|unset|${MARGIN_LENGTH}(?:\\s+${MARGIN_LENGTH}){0,3})$`, 'i');
-
 const sanitizeBodyPropertyValue = (property: string, value: string) => {
     const trimmedValue = value.trim();
 
-    if (!isSafeCssValue(trimmedValue)) {
+    if (!isSafeRawCssValue(trimmedValue)) {
         return null;
     }
 
     const allowedValues = BODY_ENUM_VALUE_WHITELISTS[property];
 
     if (allowedValues && !allowedValues.has(trimmedValue.toLowerCase())) {
-        return null;
-    }
-
-    if (property.startsWith('margin') && !MARGIN_VALUE_PATTERN.test(trimmedValue)) {
         return null;
     }
 

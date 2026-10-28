@@ -112,16 +112,15 @@ describe('본문 정화 — 입력 폼·화면 덮기 차단', () => {
     ).toBe('color: red');
   });
 
-  it('음수 margin 과 url()·expression 값은 지운다', () => {
-    expect(styleOf('<div style="margin-top: -9999px; margin: 0px auto">x</div>', 'div')).toBe('margin: 0px auto');
+  it('url()·expression·역슬래시 이스케이프 값은 지운다', () => {
     expect(styleOf('<p style="background: url(https://evil.example.com/a.png); width: expression(1)">x</p>', 'p')).toBeNull();
-  });
-
-  it('calc 로 만든 음수 margin 과 CSS 이스케이프 값은 지운다', () => {
-    expect(styleOf('<div style="margin-top: calc(0px - 9999px); color: red">x</div>', 'div')).toBe('color: red');
     expect(styleOf('<div style="background: u\\72l(https://evil.example.com/a.png); color: red">x</div>', 'div')).toBe(
       'color: red',
     );
+  });
+
+  it('margin 은 값 그대로 둔다 — 영역 밖으로 나간 부분은 뷰어 루트가 자른다', () => {
+    expect(styleOf('<p style="margin: -8px 0px 10vh; color: red">x</p>', 'p')).toBe('margin: -8px 0px 10vh; color: red');
   });
 
   it('dialog·svg·math 태그를 통째로 지운다', () => {
@@ -130,17 +129,6 @@ describe('본문 정화 — 입력 폼·화면 덮기 차단', () => {
     );
     expect(out).not.toMatch(/<(dialog|svg|math|animateTransform|rect)\b/i);
     expect(out).toContain('<p>b</p>');
-  });
-
-  it('양수 vh·vw 단위 margin 은 남기고 inherit 는 지운다', () => {
-    expect(styleOf('<p style="margin: 10vh 0px">x</p>', 'p')).toBe('margin: 10vh 0px');
-    expect(styleOf('<p style="margin-top: inherit; color: red">x</p>', 'p')).toBe('color: red');
-  });
-
-  it('아주 긴 숫자 margin 도 바로 끝난다', () => {
-    const started = Date.now();
-    styleOf(`<p style="margin-top: ${'1'.repeat(50000)}x">x</p>`, 'p');
-    expect(Date.now() - started).toBeLessThan(500);
   });
 
   it('box-shadow·opacity 는 링크 스타일처럼 남긴다', () => {
