@@ -1,5 +1,6 @@
 import DOMPurify from 'isomorphic-dompurify';
 import { isAikiveEmbedSrc } from './aikive-video-url';
+import { sanitizeBodyStyle } from './sanitize-link-style';
 
 // 본문 HTML 정화 — 허용 iframe 호스트·새 탭 링크 보호는 훅으로 항상 강제하고 허용 폭만 옵션으로 받는다
 // iframe(영상 임베드)으로 허용할 도메인 목록. 이 목록 밖의 iframe은 통째로 제거한다.
@@ -10,6 +11,9 @@ const ALLOWED_IFRAME_HOSTS = new Set<string>([
     'youtube-nocookie.com',
     'player.vimeo.com',
 ]);
+
+// 본문에 입력 폼·페이지 CSS 를 넣으면 사이트 안에 가짜 로그인 화면을 만들 수 있다
+const FORBIDDEN_TAGS = ['form', 'input', 'button', 'textarea', 'select', 'option', 'style'];
 
 // 호출할 때마다 항상 허용하는 속성(iframe 임베드에 필요한 것들 + 링크 target).
 const BASE_ALLOWED_ATTRS = [
@@ -59,6 +63,16 @@ const getHost = (src: string): string => {
 const ensureSecurityHook = () => {
     if (isHookRegistered) return;
     isHookRegistered = true;
+
+    DOMPurify.addHook('uponSanitizeAttribute', (_node, data) => {
+        if (!isPackageCall || data.attrName !== 'style') return;
+        const style = sanitizeBodyStyle(data.attrValue);
+        if (style) {
+            data.attrValue = style;
+        } else {
+            data.keepAttr = false;
+        }
+    });
 
     DOMPurify.addHook('afterSanitizeAttributes', (node) => {
         if (!isPackageCall) return;
@@ -122,6 +136,7 @@ export const sanitizeRichHtml = (html: string, options: SanitizeOptions = {}): s
         return DOMPurify.sanitize(html, {
             ...(allowIframe ? { ADD_TAGS: ['iframe'] } : {}),
             ADD_ATTR: [...BASE_ALLOWED_ATTRS, ...extraAttrs],
+            FORBID_TAGS: FORBIDDEN_TAGS,
         });
     } finally {
         isPackageCall = false;

@@ -171,7 +171,11 @@ const sanitizePropertyValue = (property: string, value: string) => {
     return normalizedValue;
 };
 
-export const sanitizeLinkStyle = (styleText: string | null | undefined) => {
+const filterDeclarations = (
+    styleText: string | null | undefined,
+    allowedProperties: ReadonlySet<string>,
+    sanitizeValue: (property: string, value: string) => string | null,
+) => {
     if (!styleText?.trim()) {
         return null;
     }
@@ -189,11 +193,11 @@ export const sanitizeLinkStyle = (styleText: string | null | undefined) => {
         const property = declaration.slice(0, separatorIndex).trim().toLowerCase();
         const value = declaration.slice(separatorIndex + 1).trim();
 
-        if (!ALLOWED_LINK_STYLE_PROPERTIES.has(property)) {
+        if (!allowedProperties.has(property)) {
             return;
         }
 
-        const sanitizedValue = sanitizePropertyValue(property, value);
+        const sanitizedValue = sanitizeValue(property, value);
 
         if (!sanitizedValue) {
             return;
@@ -217,3 +221,48 @@ export const sanitizeLinkStyle = (styleText: string | null | undefined) => {
         .map((property) => `${property}: ${sanitizedValues.get(property)}`)
         .join('; ');
 };
+
+export const sanitizeLinkStyle = (styleText: string | null | undefined) =>
+    filterDeclarations(styleText, ALLOWED_LINK_STYLE_PROPERTIES, sanitizePropertyValue);
+
+// 위치·변형·애니메이션은 본문 요소로 화면 전체를 덮을 수 있어 뺀다
+const BODY_STYLE_PROPERTIES = new Set([
+    ...[...ALLOWED_LINK_STYLE_PROPERTIES].filter((property) => !/^(transform|animation)/.test(property)),
+    'aspect-ratio',
+    'box-sizing',
+    'cursor',
+    'image-rendering',
+]);
+
+const BODY_ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
+    ...ENUM_VALUE_WHITELISTS,
+    display: new Set(['block', 'flex', 'inline', 'inline-block', 'inline-flex']),
+    'text-align': new Set(['center', 'justify', 'left', 'right']),
+};
+
+const NEGATIVE_LENGTH_PATTERN = /(?:^|[\s(,])-[\d.]/;
+
+const sanitizeBodyPropertyValue = (property: string, value: string) => {
+    const trimmedValue = value.trim();
+
+    if (!isSafeCssValue(trimmedValue)) {
+        return null;
+    }
+
+    const allowedValues = BODY_ENUM_VALUE_WHITELISTS[property];
+
+    if (allowedValues && !allowedValues.has(trimmedValue.toLowerCase())) {
+        return null;
+    }
+
+    // 음수 margin 은 앞쪽 화면(머리글 등) 위로 끌어올려 덮는 데 쓸 수 있다
+    if (property.startsWith('margin') && NEGATIVE_LENGTH_PATTERN.test(trimmedValue)) {
+        return null;
+    }
+
+    return trimmedValue;
+};
+
+// 본문은 서버 렌더와 브라우저 결과가 같아야 해서 링크와 달리 브라우저 CSS 정규화 없이 문자열로만 거른다
+export const sanitizeBodyStyle = (styleText: string | null | undefined) =>
+    filterDeclarations(styleText, BODY_STYLE_PROPERTIES, sanitizeBodyPropertyValue);
