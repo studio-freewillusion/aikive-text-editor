@@ -117,6 +117,27 @@ describe('본문 정화 — 입력 폼·화면 덮기 차단', () => {
     expect(styleOf('<p style="background: url(https://evil.example.com/a.png); width: expression(1)">x</p>', 'p')).toBeNull();
   });
 
+  it('calc 로 만든 음수 margin 과 CSS 이스케이프 값은 지운다', () => {
+    expect(styleOf('<div style="margin-top: calc(0px - 9999px); color: red">x</div>', 'div')).toBe('color: red');
+    expect(styleOf('<div style="background: u\\72l(https://evil.example.com/a.png); color: red">x</div>', 'div')).toBe(
+      'color: red',
+    );
+  });
+
+  it('dialog 태그와 svg transform 속성을 지운다', () => {
+    const out = sanitizeRichHtml(
+      '<dialog open><p>가짜</p></dialog><svg transform="scale(40)" width="10" height="10"><rect width="10" height="10"></rect></svg>',
+    );
+    expect(out).not.toMatch(/<dialog\b/i);
+    expect(out).not.toContain('transform=');
+  });
+
+  it('화면을 칠하거나 숨기는 box-shadow·opacity 는 지운다', () => {
+    expect(styleOf('<a href="https://a.example.com" style="box-shadow: 0 0 0 100vmax #fff; opacity: 0; color: red">x</a>', 'a')).toBe(
+      'color: red',
+    );
+  });
+
   it('허용 속성이 하나도 없으면 style 속성을 지운다', () => {
     expect(sanitizeRichHtml('<p style="position: absolute">x</p>')).toBe('<p>x</p>');
   });
@@ -127,6 +148,8 @@ describe('본문 정화 — 입력 폼·화면 덮기 차단', () => {
       ['<img src="https://cdn.example.com/a.png" style="max-width: 100%; box-sizing: border-box; image-rendering: -webkit-optimize-contrast; vertical-align: middle; border-style: none">', 'img', 'max-width: 100%; box-sizing: border-box; image-rendering: -webkit-optimize-contrast; vertical-align: middle; border-style: none'],
       ['<p><span style="font-size: 18px; color: #FF0000; line-height: 1.6; font-family: &quot;Noto Sans KR&quot;, sans-serif">a</span></p>', 'span', 'font-size: 18px; color: #FF0000; line-height: 1.6; font-family: "Noto Sans KR", sans-serif'],
       ['<p style="text-align: center">a</p>', 'p', 'text-align: center'],
+      ['<img src="https://cdn.example.com/a.png" style="width: 100%; height: 200px; object-fit: cover; object-position: center; margin: 0px auto 0px 0px">', 'img', 'width: 100%; height: 200px; object-fit: cover; object-position: center; margin: 0px auto 0px 0px'],
+      ['<img src="https://cdn.example.com/a.png" style="margin: unset">', 'img', 'margin: unset'],
       ['<iframe src="https://www.youtube.com/embed/abc" style="width: 100%; height: 315px; aspect-ratio: 16 / 9; display: block; border: 0"></iframe>', 'iframe', 'width: 100%; height: 315px; aspect-ratio: 16 / 9; display: block; border: 0'],
       ['<table style="min-width: 300px"><colgroup><col style="min-width: 25px; width: 120px"></colgroup><tbody><tr><td style="text-align: right">1</td></tr></tbody></table>', 'col', 'min-width: 25px; width: 120px'],
       ['<a href="https://a.example.com" style="display: inline-block; padding: 12px 24px; background: rgb(255, 107, 53); color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; text-underline-offset: 3px">신청</a>', 'a', 'display: inline-block; padding: 12px 24px; background: rgb(255, 107, 53); color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; text-underline-offset: 3px'],

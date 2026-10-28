@@ -225,27 +225,35 @@ const filterDeclarations = (
 export const sanitizeLinkStyle = (styleText: string | null | undefined) =>
     filterDeclarations(styleText, ALLOWED_LINK_STYLE_PROPERTIES, sanitizePropertyValue);
 
-// 위치·변형·애니메이션은 본문 요소로 화면 전체를 덮을 수 있어 뺀다
+// 변형·애니메이션·그림자·투명도는 본문 요소로 화면을 덮거나 숨긴 클릭 영역을 만들 수 있어 뺀다
 const BODY_STYLE_PROPERTIES = new Set([
-    ...[...ALLOWED_LINK_STYLE_PROPERTIES].filter((property) => !/^(transform|animation)/.test(property)),
+    ...[...ALLOWED_LINK_STYLE_PROPERTIES].filter(
+        (property) => !/^(transform|animation|box-shadow|opacity)/.test(property),
+    ),
     'aspect-ratio',
     'box-sizing',
     'cursor',
     'image-rendering',
+    'object-fit',
+    'object-position',
 ]);
 
 const BODY_ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
     ...ENUM_VALUE_WHITELISTS,
     display: new Set(['block', 'flex', 'inline', 'inline-block', 'inline-flex']),
+    'object-fit': new Set(['contain', 'cover', 'fill', 'none', 'scale-down']),
     'text-align': new Set(['center', 'justify', 'left', 'right']),
 };
 
-const NEGATIVE_LENGTH_PATTERN = /(?:^|[\s(,])-[\d.]/;
+// 음수·calc 값은 앞쪽 화면(머리글 등) 위로 끌어올려 덮는 데 쓸 수 있어 0 이상 길이와 auto 만 받는다
+const MARGIN_LENGTH = String.raw`(?:auto|0|\d*\.?\d+(?:px|em|rem|%|pt))`;
+const MARGIN_VALUE_PATTERN = new RegExp(`^(?:inherit|initial|unset|${MARGIN_LENGTH}(?:\\s+${MARGIN_LENGTH}){0,3})$`, 'i');
 
 const sanitizeBodyPropertyValue = (property: string, value: string) => {
     const trimmedValue = value.trim();
 
-    if (!isSafeCssValue(trimmedValue)) {
+    // 역슬래시 이스케이프(u\72l( 등)는 문자열 검사를 우회해 url( 로 읽힌다
+    if (!isSafeCssValue(trimmedValue) || trimmedValue.includes('\\')) {
         return null;
     }
 
@@ -255,8 +263,11 @@ const sanitizeBodyPropertyValue = (property: string, value: string) => {
         return null;
     }
 
-    // 음수 margin 은 앞쪽 화면(머리글 등) 위로 끌어올려 덮는 데 쓸 수 있다
-    if (property.startsWith('margin') && NEGATIVE_LENGTH_PATTERN.test(trimmedValue)) {
+    if (property.startsWith('margin') && !MARGIN_VALUE_PATTERN.test(trimmedValue)) {
+        return null;
+    }
+
+    if (property === 'font-weight' && !/^(normal|bold|bolder|lighter|[1-9]00)$/i.test(trimmedValue)) {
         return null;
     }
 
