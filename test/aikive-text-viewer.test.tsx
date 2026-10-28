@@ -44,7 +44,7 @@ describe('AikiveTextViewer', () => {
     expect(container.firstElementChild).toHaveStyle({ contain: 'paint' });
   });
 
-  it('HTML 표는 감싸지 않고 본문에 있는 그대로 둔다 — 쓰는 쪽 표 스타일이 바뀌지 않는다', () => {
+  it('HTML 표는 가로 스크롤 상자로 감싸지 않고, 본문에 이미 감싼 표는 그대로 둔다', () => {
     const { container } = render(
       <AikiveTextViewer content='<table><tbody><tr><td>1</td></tr></tbody></table><div class="tableWrapper"><table><tbody><tr><td>2</td></tr></tbody></table></div>' />,
     );
