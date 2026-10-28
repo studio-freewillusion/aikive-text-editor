@@ -1,4 +1,4 @@
-import parse, { attributesToProps, domToReact, type DOMNode, type Element, type HTMLReactParserOptions } from 'html-react-parser';
+import parse, { attributesToProps, type DOMNode, type Element } from 'html-react-parser';
 import type React from 'react';
 import { sanitizeRichHtml } from '../sanitize';
 import type { RenderOptions } from './types';
@@ -9,20 +9,10 @@ export function renderHtml(
   extraIframeHosts: string[] = [],
   embedHosts: string[] = [],
 ): React.ReactNode {
-  const options: HTMLReactParserOptions = {
+  return parse(sanitizeRichHtml(html, { lazyMedia, extraIframeHosts, embedHosts }), {
     replace: (node: DOMNode) => {
       if (node.type !== 'tag') return undefined;
       const el = node as Element;
-      // 뷰어 루트가 영역 밖을 잘라 넓은 표는 옛 JSON 본문처럼 가로 스크롤 상자 안에 둔다
-      if (el.name === 'table') {
-        const parent = el.parent as Element | null;
-        if (parent?.attribs?.class?.split(/\s+/).includes('tableWrapper')) return undefined;
-        return (
-          <div className="tableWrapper">
-            <table {...attributesToProps(el.attribs)}>{domToReact(el.children as DOMNode[], options)}</table>
-          </div>
-        );
-      }
       if (el.name !== 'img' || !el.attribs.src) return undefined;
 
       const { src } = el.attribs;
@@ -38,6 +28,5 @@ export function renderHtml(
         />
       );
     },
-  };
-  return parse(sanitizeRichHtml(html, { lazyMedia, extraIframeHosts, embedHosts }), options);
+  });
 }
