@@ -86,6 +86,21 @@ describe('renderLegacyJson', () => {
         expect(video).toHaveAttribute('controls');
     });
 
+    it('px 폭 영상 상자는 본문 폭을 넘지 않는다', () => {
+        const videoContent = JSON.stringify({
+            type: 'doc',
+            content: [
+                { type: 'videoBlock', attrs: { src: 'https://cdn.example.com/public/a.mp4', width: '800px' } },
+            ],
+        });
+
+        const { container } = render(<TiptapStaticContent content={videoContent} />);
+
+        const box = container.querySelector<HTMLElement>('[data-type="videoBlock"]');
+        expect(box?.style.width).toBe('800px');
+        expect(box?.style.maxWidth).toBe('100%');
+    });
+
     it('이모지를 문자로 렌더한다', async () => {
         const emojiContent = JSON.stringify({
             type: 'doc',

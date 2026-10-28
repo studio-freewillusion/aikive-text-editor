@@ -129,6 +129,10 @@
 .tiptap a:not([style*=color]) {
   color: var(--aikive-text-link, #46add4);
 }
+/* 뷰어 루트가 영역 밖을 잘라 가장자리 요소(링크·영상·스크롤 상자)의 포커스 테두리가 가려지지 않게 안쪽에 그린다 */
+.tiptap:not(.ProseMirror) :focus-visible {
+  outline-offset: -2px;
+}
 .tiptap strong {
   font-weight: 700;
 }
@@ -287,6 +291,12 @@
   display: block;
   width: 100%;
   height: auto;
+}
+/* 넓은 미디어는 뷰어 루트가 잘라 버리므로 본문 폭에 맞춘다. 일부러 좁게 둔 인라인 max-width 가 이기도록 !important 를 붙이지 않는다 */
+.tiptap img,
+.tiptap video,
+.tiptap iframe {
+  max-width: 100%;
 }
 .tiptap > div:has(> img) {
   max-width: 100%;

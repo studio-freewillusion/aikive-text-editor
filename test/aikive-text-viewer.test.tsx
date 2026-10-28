@@ -39,6 +39,26 @@ describe('AikiveTextViewer', () => {
     expect(screen.getByText('옛 글')).toBeInTheDocument();
   });
 
+  it('본문이 뷰어 영역 밖으로 그려지지 않게 루트를 자른다', () => {
+    const { container } = render(<AikiveTextViewer content="<p>글</p>" />);
+    expect(container.firstElementChild).toHaveStyle({ contain: 'paint' });
+  });
+
+  it('HTML 표는 가로 스크롤 상자로 감싸고, 이미 감싼 표는 다시 감싸지 않는다', () => {
+    const { container } = render(
+      <AikiveTextViewer content='<table><tbody><tr><td>1</td></tr></tbody></table><div class="tableWrapper"><table><tbody><tr><td>2</td></tr></tbody></table></div>' />,
+    );
+    expect(container.querySelectorAll('.tableWrapper > table')).toHaveLength(2);
+    expect(container.querySelector('.tableWrapper .tableWrapper')).toBeNull();
+  });
+
+  it('루트는 스크롤 상자가 아니다 — 포커스 이동으로 본문이 밀려 돌아올 수 없게 되지 않는다', () => {
+    const { container } = render(<AikiveTextViewer content="<p>글</p>" />);
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.style.overflowX).toBe('');
+    expect(root.style.overflowY).toBe('');
+  });
+
   it('루트에 tiptap 클래스와 넘긴 className 을 붙인다', () => {
     const { container } = render(<AikiveTextViewer content="<p>a</p>" className="detail" />);
     expect(container.firstChild).toHaveClass('tiptap', 'detail');

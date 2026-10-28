@@ -246,6 +246,7 @@ function renderNode(node: TiptapNode, key: React.Key, options: RenderOptions): R
                         alignItems: 'center',
                         backgroundColor: '#000',
                         width: node.attrs?.width || '100%',
+                        maxWidth: '100%',
                     }}
                 >
                     <video

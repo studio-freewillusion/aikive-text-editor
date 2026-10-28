@@ -116,9 +116,14 @@ const ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
     'overflow-wrap': new Set(['anywhere', 'break-word', 'normal']),
 };
 
+const FONT_WEIGHT_PATTERN = /^(normal|bold|bolder|lighter|[1-9]00)$/i;
+
 const isSafeCssValue = (value: string) => {
     return !!value && !UNSAFE_CSS_VALUE_PATTERN.test(value);
 };
+
+// 브라우저 정규화를 거치지 않는 경로(서버·본문)에서 역슬래시 이스케이프(u\72l( 등)는 문자열 검사를 우회해 url( 로 읽힌다
+const hasCssEscape = (value: string) => value.includes('\\');
 
 const sanitizePropertyValue = (property: string, value: string) => {
     const trimmedValue = value.trim();
@@ -128,6 +133,10 @@ const sanitizePropertyValue = (property: string, value: string) => {
     }
 
     if (typeof document === 'undefined') {
+        if (hasCssEscape(trimmedValue)) {
+            return null;
+        }
+
         const allowedValues = ENUM_VALUE_WHITELISTS[property];
 
         if (allowedValues && !allowedValues.has(trimmedValue.toLowerCase())) {
@@ -153,9 +162,7 @@ const sanitizePropertyValue = (property: string, value: string) => {
     }
 
     if (property === 'font-weight') {
-        const normalized = normalizedValue.toLowerCase();
-
-        if (!/^(normal|bold|bolder|lighter|[1-9]00)$/.test(normalized)) {
+        if (!FONT_WEIGHT_PATTERN.test(normalizedValue)) {
             return null;
         }
     }
@@ -171,7 +178,11 @@ const sanitizePropertyValue = (property: string, value: string) => {
     return normalizedValue;
 };
 
-export const sanitizeLinkStyle = (styleText: string | null | undefined) => {
+const filterDeclarations = (
+    styleText: string | null | undefined,
+    allowedProperties: ReadonlySet<string>,
+    sanitizeValue: (property: string, value: string) => string | null,
+) => {
     if (!styleText?.trim()) {
         return null;
     }
@@ -189,11 +200,11 @@ export const sanitizeLinkStyle = (styleText: string | null | undefined) => {
         const property = declaration.slice(0, separatorIndex).trim().toLowerCase();
         const value = declaration.slice(separatorIndex + 1).trim();
 
-        if (!ALLOWED_LINK_STYLE_PROPERTIES.has(property)) {
+        if (!allowedProperties.has(property)) {
             return;
         }
 
-        const sanitizedValue = sanitizePropertyValue(property, value);
+        const sanitizedValue = sanitizeValue(property, value);
 
         if (!sanitizedValue) {
             return;
@@ -217,3 +228,48 @@ export const sanitizeLinkStyle = (styleText: string | null | undefined) => {
         .map((property) => `${property}: ${sanitizedValues.get(property)}`)
         .join('; ');
 };
+
+export const sanitizeLinkStyle = (styleText: string | null | undefined) =>
+    filterDeclarations(styleText, ALLOWED_LINK_STYLE_PROPERTIES, sanitizePropertyValue);
+
+// 변형·애니메이션은 레이아웃 밖으로 요소를 옮겨 덮는 데 쓸 수 있어 뺀다(넘쳐 칠하는 건 뷰어 루트가 자른다)
+const BODY_STYLE_PROPERTIES = new Set([
+    ...[...ALLOWED_LINK_STYLE_PROPERTIES].filter((property) => !/^(transform|animation)/.test(property)),
+    'aspect-ratio',
+    'box-sizing',
+    'cursor',
+    'image-rendering',
+    'object-fit',
+    'object-position',
+]);
+
+const BODY_ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
+    ...ENUM_VALUE_WHITELISTS,
+    display: new Set(['block', 'flex', 'inline', 'inline-block', 'inline-flex']),
+    'object-fit': new Set(['contain', 'cover', 'fill', 'none', 'scale-down']),
+    'text-align': new Set(['center', 'justify', 'left', 'right']),
+};
+
+const sanitizeBodyPropertyValue = (property: string, value: string) => {
+    const trimmedValue = value.trim();
+
+    if (!isSafeCssValue(trimmedValue) || hasCssEscape(trimmedValue)) {
+        return null;
+    }
+
+    const allowedValues = BODY_ENUM_VALUE_WHITELISTS[property];
+
+    if (allowedValues && !allowedValues.has(trimmedValue.toLowerCase())) {
+        return null;
+    }
+
+    if (property === 'font-weight' && !FONT_WEIGHT_PATTERN.test(trimmedValue)) {
+        return null;
+    }
+
+    return trimmedValue;
+};
+
+// 본문은 서버 렌더와 브라우저 결과가 같아야 해서 링크와 달리 브라우저 CSS 정규화 없이 문자열로만 거른다
+export const sanitizeBodyStyle = (styleText: string | null | undefined) =>
+    filterDeclarations(styleText, BODY_STYLE_PROPERTIES, sanitizeBodyPropertyValue);

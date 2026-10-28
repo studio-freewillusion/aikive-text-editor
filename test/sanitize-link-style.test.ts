@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sanitizeLinkStyle } from '../src/sanitize';
 
 describe('sanitizeLinkStyle', () => {
@@ -11,5 +11,22 @@ describe('sanitizeLinkStyle', () => {
   it('url()·expression() 값은 버린다', () => {
     expect(sanitizeLinkStyle('background: url(https://x.example.com/a.png)') ?? '').not.toContain('url(');
     expect(sanitizeLinkStyle('color: expression(alert(1))') ?? '').not.toContain('expression');
+  });
+});
+
+describe('sanitizeLinkStyle — 브라우저', () => {
+  it('정규화하는 경로는 역슬래시가 있어도 선언을 통째로 버리지 않는다', () => {
+    expect(sanitizeLinkStyle("font-family: '\\5FAE\\8F6F'; color: red")).toContain('font-family');
+  });
+});
+
+describe('sanitizeLinkStyle — document 없는 서버', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('역슬래시 이스케이프로 숨긴 url( 은 지운다', () => {
+    vi.stubGlobal('document', undefined);
+    expect(sanitizeLinkStyle('background: u\\72l(https://evil.example.com/a.png); color: red')).toBe('color: red');
   });
 });
