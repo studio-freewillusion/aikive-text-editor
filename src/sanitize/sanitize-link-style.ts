@@ -250,6 +250,10 @@ const BODY_ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
     'text-align': new Set(['center', 'justify', 'left', 'right']),
 };
 
+// 뷰어 루트가 영역 밖을 잘라 본문보다 넓은 블록은 보이지 않게 된다. 좁게 둔 값은 살리고 넓은 값만 본문 폭으로 줄인다
+const WIDTH_PROPERTIES = new Set(['width', 'min-width', 'max-width']);
+const CAPPABLE_LENGTH_PATTERN = /^(?:(?:\d+(?:\.\d+)?|\.\d+)(?:px|em|rem|pt|pc|vw|vh|vmin|vmax|ch|ex|cm|mm|in)|(?:calc|clamp|max|min)\(.*\))$/i;
+
 const sanitizeBodyPropertyValue = (property: string, value: string) => {
     const trimmedValue = value.trim();
 
@@ -265,6 +269,10 @@ const sanitizeBodyPropertyValue = (property: string, value: string) => {
 
     if (property === 'font-weight' && !FONT_WEIGHT_PATTERN.test(trimmedValue)) {
         return null;
+    }
+
+    if (WIDTH_PROPERTIES.has(property) && CAPPABLE_LENGTH_PATTERN.test(trimmedValue)) {
+        return `min(${trimmedValue}, 100%)`;
     }
 
     return trimmedValue;

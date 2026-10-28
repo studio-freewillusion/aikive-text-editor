@@ -292,10 +292,11 @@
   width: 100%;
   height: auto;
 }
-/* 인라인 px 폭이 본문보다 넓으면 뷰어 루트가 잘라 버리므로 폭에 맞춰 줄인다. 인라인 min/max-width 가 이기지 않게 !important */
-.tiptap:not(.ProseMirror) :where(div, img, video, iframe) {
-  min-width: 0 !important;
-  max-width: 100% !important;
+/* 속성 width 처럼 style 밖에서 정한 폭도 본문을 넘지 않게 한다(style 폭은 정화 단계가 min(값, 100%) 로 감싼다) */
+.tiptap img,
+.tiptap video,
+.tiptap iframe {
+  max-width: 100%;
 }
 .tiptap > div:has(> img) {
   max-width: 100%;
