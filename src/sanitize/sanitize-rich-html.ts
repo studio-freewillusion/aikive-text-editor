@@ -13,8 +13,8 @@ const ALLOWED_IFRAME_HOSTS = new Set<string>([
 ]);
 
 // 본문에 입력 폼·페이지 CSS 를 넣으면 사이트 안에 가짜 로그인 화면을 만들 수 있다
-// dialog 는 브라우저 기본 스타일이 absolute 라 position 없이도 화면을 덮고, svg transform 속성은 style 밖에서 확대한다
-const FORBIDDEN_TAGS = ['form', 'input', 'button', 'textarea', 'select', 'option', 'style', 'dialog'];
+// dialog 는 기본 스타일이 absolute 라 화면을 덮고, svg·math 는 style 밖의 속성(transform·overflow 등)으로 배치를 바꾼다
+const FORBIDDEN_TAGS = ['form', 'input', 'button', 'textarea', 'select', 'option', 'style', 'dialog', 'svg', 'math'];
 
 // 호출할 때마다 항상 허용하는 속성(iframe 임베드에 필요한 것들 + 링크 target).
 const BASE_ALLOWED_ATTRS = [
@@ -138,7 +138,6 @@ export const sanitizeRichHtml = (html: string, options: SanitizeOptions = {}): s
             ...(allowIframe ? { ADD_TAGS: ['iframe'] } : {}),
             ADD_ATTR: [...BASE_ALLOWED_ATTRS, ...extraAttrs],
             FORBID_TAGS: FORBIDDEN_TAGS,
-            FORBID_ATTR: ['transform'],
         });
     } finally {
         isPackageCall = false;

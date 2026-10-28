@@ -116,8 +116,11 @@ const ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
     'overflow-wrap': new Set(['anywhere', 'break-word', 'normal']),
 };
 
+const FONT_WEIGHT_PATTERN = /^(normal|bold|bolder|lighter|[1-9]00)$/i;
+
+// 역슬래시 이스케이프(u\72l( 등)는 문자열 검사를 우회해 브라우저에서 url( 로 읽힌다
 const isSafeCssValue = (value: string) => {
-    return !!value && !UNSAFE_CSS_VALUE_PATTERN.test(value);
+    return !!value && !value.includes('\\') && !UNSAFE_CSS_VALUE_PATTERN.test(value);
 };
 
 const sanitizePropertyValue = (property: string, value: string) => {
@@ -155,7 +158,7 @@ const sanitizePropertyValue = (property: string, value: string) => {
     if (property === 'font-weight') {
         const normalized = normalizedValue.toLowerCase();
 
-        if (!/^(normal|bold|bolder|lighter|[1-9]00)$/.test(normalized)) {
+        if (!FONT_WEIGHT_PATTERN.test(normalized)) {
             return null;
         }
     }
@@ -246,14 +249,14 @@ const BODY_ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
 };
 
 // 음수·calc 값은 앞쪽 화면(머리글 등) 위로 끌어올려 덮는 데 쓸 수 있어 0 이상 길이와 auto 만 받는다
-const MARGIN_LENGTH = String.raw`(?:auto|0|\d*\.?\d+(?:px|em|rem|%|pt))`;
-const MARGIN_VALUE_PATTERN = new RegExp(`^(?:inherit|initial|unset|${MARGIN_LENGTH}(?:\\s+${MARGIN_LENGTH}){0,3})$`, 'i');
+// inherit 는 감싸는 사이트 요소의 음수 margin 을 물려받을 수 있어 받지 않는다
+const MARGIN_LENGTH = String.raw`(?:auto|0|(?:\d+(?:\.\d+)?|\.\d+)(?:px|em|rem|%|pt|vh|vw|vmin|vmax|ch|ex))`;
+const MARGIN_VALUE_PATTERN = new RegExp(`^(?:initial|unset|${MARGIN_LENGTH}(?:\\s+${MARGIN_LENGTH}){0,3})$`, 'i');
 
 const sanitizeBodyPropertyValue = (property: string, value: string) => {
     const trimmedValue = value.trim();
 
-    // 역슬래시 이스케이프(u\72l( 등)는 문자열 검사를 우회해 url( 로 읽힌다
-    if (!isSafeCssValue(trimmedValue) || trimmedValue.includes('\\')) {
+    if (!isSafeCssValue(trimmedValue)) {
         return null;
     }
 
@@ -267,7 +270,7 @@ const sanitizeBodyPropertyValue = (property: string, value: string) => {
         return null;
     }
 
-    if (property === 'font-weight' && !/^(normal|bold|bolder|lighter|[1-9]00)$/i.test(trimmedValue)) {
+    if (property === 'font-weight' && !FONT_WEIGHT_PATTERN.test(trimmedValue)) {
         return null;
     }
 

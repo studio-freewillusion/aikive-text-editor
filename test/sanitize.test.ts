@@ -124,12 +124,23 @@ describe('본문 정화 — 입력 폼·화면 덮기 차단', () => {
     );
   });
 
-  it('dialog 태그와 svg transform 속성을 지운다', () => {
+  it('dialog·svg·math 태그를 통째로 지운다', () => {
     const out = sanitizeRichHtml(
-      '<dialog open><p>가짜</p></dialog><svg transform="scale(40)" width="10" height="10"><rect width="10" height="10"></rect></svg>',
+      '<dialog open><p>가짜</p></dialog><svg width="10" height="10" overflow="visible"><animateTransform attributeName="transform" type="scale" values="1;40"></animateTransform><rect x="-5000" width="10000" height="10000"></rect></svg><math><mi>x</mi></math><p>b</p>',
     );
-    expect(out).not.toMatch(/<dialog\b/i);
-    expect(out).not.toContain('transform=');
+    expect(out).not.toMatch(/<(dialog|svg|math|animateTransform|rect)\b/i);
+    expect(out).toContain('<p>b</p>');
+  });
+
+  it('양수 vh·vw 단위 margin 은 남기고 inherit 는 지운다', () => {
+    expect(styleOf('<p style="margin: 10vh 0px">x</p>', 'p')).toBe('margin: 10vh 0px');
+    expect(styleOf('<p style="margin-top: inherit; color: red">x</p>', 'p')).toBe('color: red');
+  });
+
+  it('아주 긴 숫자 margin 도 바로 끝난다', () => {
+    const started = Date.now();
+    styleOf(`<p style="margin-top: ${'1'.repeat(50000)}x">x</p>`, 'p');
+    expect(Date.now() - started).toBeLessThan(500);
   });
 
   it('화면을 칠하거나 숨기는 box-shadow·opacity 는 지운다', () => {
