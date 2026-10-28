@@ -228,11 +228,9 @@ const filterDeclarations = (
 export const sanitizeLinkStyle = (styleText: string | null | undefined) =>
     filterDeclarations(styleText, ALLOWED_LINK_STYLE_PROPERTIES, sanitizePropertyValue);
 
-// 변형·애니메이션·그림자·투명도는 본문 요소로 화면을 덮거나 숨긴 클릭 영역을 만들 수 있어 뺀다
+// 변형·애니메이션은 레이아웃 밖으로 요소를 옮겨 덮는 데 쓸 수 있어 뺀다(넘쳐 칠하는 건 뷰어 루트가 자른다)
 const BODY_STYLE_PROPERTIES = new Set([
-    ...[...ALLOWED_LINK_STYLE_PROPERTIES].filter(
-        (property) => !/^(transform|animation|box-shadow|opacity)/.test(property),
-    ),
+    ...[...ALLOWED_LINK_STYLE_PROPERTIES].filter((property) => !/^(transform|animation)/.test(property)),
     'aspect-ratio',
     'box-sizing',
     'cursor',

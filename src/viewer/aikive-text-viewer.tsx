@@ -29,7 +29,8 @@ export function AikiveTextViewer({
   const doc = parseLegacyDoc(content);
 
   return (
-    <div className={rootClassName}>
+    // 본문 CSS 가 넘침(flex·큰 글자·밑줄 위치 등)으로 머리글 같은 바깥 화면을 칠하지 못하게 영역 밖 그리기를 자른다
+    <div className={rootClassName} style={{ contain: 'paint' }}>
       {doc ? renderLegacyJson(doc, options) : renderHtml(content, options, extraIframeHosts, embedHosts)}
     </div>
   );

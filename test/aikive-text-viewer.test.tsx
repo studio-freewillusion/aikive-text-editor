@@ -39,6 +39,11 @@ describe('AikiveTextViewer', () => {
     expect(screen.getByText('옛 글')).toBeInTheDocument();
   });
 
+  it('본문이 뷰어 영역 밖으로 그려지지 않게 루트를 자른다', () => {
+    const { container } = render(<AikiveTextViewer content="<p>글</p>" />);
+    expect(container.firstElementChild).toHaveStyle({ contain: 'paint' });
+  });
+
   it('루트에 tiptap 클래스와 넘긴 className 을 붙인다', () => {
     const { container } = render(<AikiveTextViewer content="<p>a</p>" className="detail" />);
     expect(container.firstChild).toHaveClass('tiptap', 'detail');

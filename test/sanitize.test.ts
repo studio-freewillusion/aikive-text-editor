@@ -143,9 +143,9 @@ describe('본문 정화 — 입력 폼·화면 덮기 차단', () => {
     expect(Date.now() - started).toBeLessThan(500);
   });
 
-  it('화면을 칠하거나 숨기는 box-shadow·opacity 는 지운다', () => {
-    expect(styleOf('<a href="https://a.example.com" style="box-shadow: 0 0 0 100vmax #fff; opacity: 0; color: red">x</a>', 'a')).toBe(
-      'color: red',
+  it('box-shadow·opacity 는 링크 스타일처럼 남긴다', () => {
+    expect(styleOf('<a href="https://a.example.com" style="box-shadow: 0 2px 4px #000; opacity: 0.8">x</a>', 'a')).toBe(
+      'box-shadow: 0 2px 4px #000; opacity: 0.8',
     );
   });
 
