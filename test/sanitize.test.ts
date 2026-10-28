@@ -137,29 +137,20 @@ describe('본문 정화 — 입력 폼·화면 덮기 차단', () => {
     );
   });
 
-  it('width·min-width·max-width 길이 값은 본문 폭을 넘지 않게 min(값, 100%) 로 감싼다', () => {
-    expect(styleOf('<section style="width: 1400px; min-width: 240px; max-width: 480px">x</section>', 'section')).toBe(
-      'width: min(1400px, 100%); min-width: min(240px, 100%); max-width: min(480px, 100%)',
-    );
-    expect(styleOf('<div style="width: 100%; max-width: none; min-width: auto">x</div>', 'div')).toBe(
-      'width: 100%; max-width: none; min-width: auto',
-    );
-  });
-
   it('허용 속성이 하나도 없으면 style 속성을 지운다', () => {
     expect(sanitizeRichHtml('<p style="position: absolute">x</p>')).toBe('<p>x</p>');
   });
 
-  it('prod 본문이 쓰는 style 은 남긴다 — 폭 길이만 min(값, 100%) 로 감싼다', () => {
+  it('prod 본문이 쓰는 style 은 값 그대로 남긴다', () => {
     const cases: Array<[string, string, string]> = [
-      ['<img src="https://cdn.example.com/a.png" style="width: 155px; height: auto; cursor: pointer; display: block; margin: 0px auto">', 'img', 'width: min(155px, 100%); height: auto; cursor: pointer; display: block; margin: 0px auto'],
+      ['<img src="https://cdn.example.com/a.png" style="width: 155px; height: auto; cursor: pointer; display: block; margin: 0px auto">', 'img', 'width: 155px; height: auto; cursor: pointer; display: block; margin: 0px auto'],
       ['<img src="https://cdn.example.com/a.png" style="max-width: 100%; box-sizing: border-box; image-rendering: -webkit-optimize-contrast; vertical-align: middle; border-style: none">', 'img', 'max-width: 100%; box-sizing: border-box; image-rendering: -webkit-optimize-contrast; vertical-align: middle; border-style: none'],
       ['<p><span style="font-size: 18px; color: #FF0000; line-height: 1.6; font-family: &quot;Noto Sans KR&quot;, sans-serif">a</span></p>', 'span', 'font-size: 18px; color: #FF0000; line-height: 1.6; font-family: "Noto Sans KR", sans-serif'],
       ['<p style="text-align: center">a</p>', 'p', 'text-align: center'],
       ['<img src="https://cdn.example.com/a.png" style="width: 100%; height: 200px; object-fit: cover; object-position: center; margin: 0px auto 0px 0px">', 'img', 'width: 100%; height: 200px; object-fit: cover; object-position: center; margin: 0px auto 0px 0px'],
       ['<img src="https://cdn.example.com/a.png" style="margin: unset">', 'img', 'margin: unset'],
       ['<iframe src="https://www.youtube.com/embed/abc" style="width: 100%; height: 315px; aspect-ratio: 16 / 9; display: block; border: 0"></iframe>', 'iframe', 'width: 100%; height: 315px; aspect-ratio: 16 / 9; display: block; border: 0'],
-      ['<table style="min-width: 300px"><colgroup><col style="min-width: 25px; width: 120px"></colgroup><tbody><tr><td style="text-align: right">1</td></tr></tbody></table>', 'col', 'min-width: min(25px, 100%); width: min(120px, 100%)'],
+      ['<table style="min-width: 300px"><colgroup><col style="min-width: 25px; width: 120px"></colgroup><tbody><tr><td style="text-align: right">1</td></tr></tbody></table>', 'col', 'min-width: 25px; width: 120px'],
       ['<a href="https://a.example.com" style="display: inline-block; padding: 12px 24px; background: rgb(255, 107, 53); color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; text-underline-offset: 3px">신청</a>', 'a', 'display: inline-block; padding: 12px 24px; background: rgb(255, 107, 53); color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; text-underline-offset: 3px'],
     ];
     for (const [html, selector, style] of cases) {
