@@ -44,6 +44,14 @@ describe('AikiveTextViewer', () => {
     expect(container.firstElementChild).toHaveStyle({ contain: 'paint' });
   });
 
+  it('HTML 표는 가로 스크롤 상자로 감싸고, 이미 감싼 표는 다시 감싸지 않는다', () => {
+    const { container } = render(
+      <AikiveTextViewer content='<table><tbody><tr><td>1</td></tr></tbody></table><div class="tableWrapper"><table><tbody><tr><td>2</td></tr></tbody></table></div>' />,
+    );
+    expect(container.querySelectorAll('.tableWrapper > table')).toHaveLength(2);
+    expect(container.querySelector('.tableWrapper .tableWrapper')).toBeNull();
+  });
+
   it('루트는 스크롤 상자가 아니다 — 포커스 이동으로 본문이 밀려 돌아올 수 없게 되지 않는다', () => {
     const { container } = render(<AikiveTextViewer content="<p>글</p>" />);
     const root = container.firstElementChild as HTMLElement;

@@ -123,7 +123,7 @@ const isSafeCssValue = (value: string) => {
 };
 
 // 브라우저 정규화를 거치지 않는 경로(서버·본문)에서 역슬래시 이스케이프(u\72l( 등)는 문자열 검사를 우회해 url( 로 읽힌다
-const isSafeRawCssValue = (value: string) => isSafeCssValue(value) && !value.includes('\\');
+const hasCssEscape = (value: string) => value.includes('\\');
 
 const sanitizePropertyValue = (property: string, value: string) => {
     const trimmedValue = value.trim();
@@ -133,7 +133,7 @@ const sanitizePropertyValue = (property: string, value: string) => {
     }
 
     if (typeof document === 'undefined') {
-        if (trimmedValue.includes('\\')) {
+        if (hasCssEscape(trimmedValue)) {
             return null;
         }
 
@@ -253,7 +253,7 @@ const BODY_ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
 const sanitizeBodyPropertyValue = (property: string, value: string) => {
     const trimmedValue = value.trim();
 
-    if (!isSafeRawCssValue(trimmedValue)) {
+    if (!isSafeCssValue(trimmedValue) || hasCssEscape(trimmedValue)) {
         return null;
     }
 
