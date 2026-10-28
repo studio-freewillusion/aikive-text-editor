@@ -28,9 +28,9 @@ export function AikiveTextViewer({
   const rootClassName = ['tiptap', className].filter(Boolean).join(' ');
   const doc = parseLegacyDoc(content);
 
-  // 본문 CSS 가 넘침(flex·큰 글자·밑줄 위치 등)으로 머리글 같은 바깥 화면을 칠하지 못하게 영역 밖을 자르고, 넓은 이미지·표는 가로 스크롤로 본다
+  // 본문 CSS 가 넘침(flex·큰 글자·밑줄 위치 등)으로 머리글 같은 바깥 화면을 칠하지 못하게 영역 밖을 자른다(넓은 이미지는 CSS max-width 로 줄임)
   return (
-    <div className={rootClassName} style={{ contain: 'paint', overflowX: 'auto', overflowY: 'hidden' }}>
+    <div className={rootClassName} style={{ contain: 'paint' }}>
       {doc ? renderLegacyJson(doc, options) : renderHtml(content, options, extraIframeHosts, embedHosts)}
     </div>
   );

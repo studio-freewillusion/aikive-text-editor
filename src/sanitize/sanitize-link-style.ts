@@ -122,7 +122,7 @@ const isSafeCssValue = (value: string) => {
     return !!value && !UNSAFE_CSS_VALUE_PATTERN.test(value);
 };
 
-// 브라우저 정규화를 거치지 않는 경로에서 역슬래시 이스케이프(u\72l( 등)는 문자열 검사를 우회해 url( 로 읽힌다
+// 브라우저 정규화를 거치지 않는 경로(서버·본문)에서 역슬래시 이스케이프(u\72l( 등)는 문자열 검사를 우회해 url( 로 읽힌다
 const isSafeRawCssValue = (value: string) => isSafeCssValue(value) && !value.includes('\\');
 
 const sanitizePropertyValue = (property: string, value: string) => {
@@ -133,7 +133,7 @@ const sanitizePropertyValue = (property: string, value: string) => {
     }
 
     if (typeof document === 'undefined') {
-        if (!isSafeRawCssValue(trimmedValue)) {
+        if (trimmedValue.includes('\\')) {
             return null;
         }
 
@@ -250,7 +250,6 @@ const BODY_ENUM_VALUE_WHITELISTS: Partial<Record<string, Set<string>>> = {
     'text-align': new Set(['center', 'justify', 'left', 'right']),
 };
 
-// 음수·calc 값은 앞쪽 화면(머리글 등) 위로 끌어올려 덮는 데 쓸 수 있어 0 이상 길이와 auto 만 받는다
 const sanitizeBodyPropertyValue = (property: string, value: string) => {
     const trimmedValue = value.trim();
 

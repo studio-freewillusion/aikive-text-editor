@@ -41,12 +41,14 @@ describe('AikiveTextViewer', () => {
 
   it('본문이 뷰어 영역 밖으로 그려지지 않게 루트를 자른다', () => {
     const { container } = render(<AikiveTextViewer content="<p>글</p>" />);
-    expect(container.firstElementChild).toHaveStyle({ contain: 'paint', overflowY: 'hidden' });
+    expect(container.firstElementChild).toHaveStyle({ contain: 'paint' });
   });
 
-  it('본문보다 넓은 이미지·표는 잘리지 않고 가로로 스크롤된다', () => {
+  it('루트는 스크롤 상자가 아니다 — 포커스 이동으로 본문이 밀려 돌아올 수 없게 되지 않는다', () => {
     const { container } = render(<AikiveTextViewer content="<p>글</p>" />);
-    expect(container.firstElementChild).toHaveStyle({ overflowX: 'auto' });
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.style.overflowX).toBe('');
+    expect(root.style.overflowY).toBe('');
   });
 
   it('루트에 tiptap 클래스와 넘긴 className 을 붙인다', () => {

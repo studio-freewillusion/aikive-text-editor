@@ -28,9 +28,9 @@ npm dedupe                                        # 두 벌이면(npm)
 | `@studio-freewillusion/aikive-text-editor/viewer` | `AikiveTextViewer`, `toPlainText`, `sanitizeRichHtml` — tiptap 을 불러오지 않아 서버 렌더링에 씁니다 |
 | `@studio-freewillusion/aikive-text-editor/editor` | `AikiveTextEditor` — 브라우저 전용(`'use client'`) |
 | `@studio-freewillusion/aikive-text-editor/styles.css` | 본문·툴바 스타일 |
+| `@studio-freewillusion/aikive-text-editor/content-guide.md` | AI 에게 본문 작성을 맡길 때 넘기는 HTML 형식 안내([docs/content-guide.md](docs/content-guide.md)) |
 
 `sanitizeRichHtml` 결과를 직접 넣을 때는 감싸는 요소에 `contain: paint` 를 함께 둡니다. 정화는 입력 폼·위치 지정 같은 큰 구멍만 막고, 본문 CSS 가 영역 밖으로 넘쳐 칠하는 것은 `AikiveTextViewer` 루트가 잘라서 막습니다.
-| `@studio-freewillusion/aikive-text-editor/content-guide.md` | AI 에게 본문 작성을 맡길 때 넘기는 HTML 형식 안내([docs/content-guide.md](docs/content-guide.md)) |
 
 ## 본문 보기
 
