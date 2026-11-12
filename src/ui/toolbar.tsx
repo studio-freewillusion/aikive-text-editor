@@ -15,6 +15,8 @@ export interface ToolbarProps {
   onOpenPopover: (kind: PopoverKind) => void;
   scrollable?: boolean;
   colors?: ColorOption[];
+  /** 미리 정한 색만 쓰게 한다 — 글자색 직접 고르기를 숨긴다 */
+  paletteOnly?: boolean;
   uploading?: boolean;
   /** 말풍선 툴바처럼 툴바 상자 폭이 내용에 맞춰질 때, 들어갈 수 있는 폭의 기준 요소 */
   boundary?: HTMLElement | null;
@@ -30,7 +32,7 @@ const LINE_HEIGHT_OPTIONS = [
   { label: '2.0', value: '2' },
 ];
 
-const COLOR_OPTIONS = [
+export const COLOR_OPTIONS = [
   { label: '검정', value: '#111111' },
   { label: '회색', value: '#6b7280' },
   { label: '빨강', value: '#dc2626' },
@@ -125,7 +127,7 @@ function ToolButton({
   );
 }
 
-export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors, uploading, boundary, popoverOpen }: ToolbarProps) {
+export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickImage, onOpenPopover, scrollable, colors, paletteOnly, uploading, boundary, popoverOpen }: ToolbarProps) {
   const [colorOpen, setColorOpen] = useState(false);
   const [paletteLeft, setPaletteLeft] = useState(0);
   const [fit, setFit] = useState(Number.POSITIVE_INFINITY);
@@ -619,7 +621,9 @@ export function Toolbar({ editor, features, sourceMode, onToggleSource, onPickIm
               onClick={() => chain().setColor(c.value).run()}
             />
           ))}
-          <input type="color" aria-label="글자색 직접 고르기" onChange={(e) => chain().setColor(e.target.value).run()} />
+          {!paletteOnly && (
+            <input type="color" aria-label="글자색 직접 고르기" onChange={(e) => chain().setColor(e.target.value).run()} />
+          )}
         </div>
       )}
     </div>

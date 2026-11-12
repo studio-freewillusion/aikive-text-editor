@@ -483,3 +483,17 @@ test('줄간격을 지정한 문단은 문단 사이 간격도 같은 비율로 
     expect(gaps[5], area).toBeCloseTo((0.15 * rem * 2) / 1.65, 1);
   }
 });
+
+test('paletteOnly 에서 팔레트 색을 고르면 색 변수로 저장되고 다시 열어도 남는다', async ({ page }) => {
+  const red = 'var(--aikive-color-red, #f96960)';
+  await page.goto('/?paletteOnly=true&content=' + encodeURIComponent('<p>빨강</p>'));
+  await page.locator('.ProseMirror').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.getByRole('button', { name: '글자색', exact: true }).click();
+  await expect(page.getByLabel('글자색 직접 고르기')).toHaveCount(0);
+  await page.getByRole('button', { name: '글자색 빨강' }).click();
+  await expect(html(page)).toContainText(`color: ${red}`);
+  const saved = (await html(page).textContent()) ?? '';
+  await page.goto('/?paletteOnly=true&content=' + encodeURIComponent(saved));
+  await expect(html(page)).toContainText(`color: ${red}`);
+});

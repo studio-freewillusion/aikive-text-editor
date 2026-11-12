@@ -81,7 +81,8 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `initialContent` | HTML 또는 옛 tiptap JSON 문서 |
 | `editable` | 기본 `true` |
 | `features` | 툴바 기능 켜기/끄기(아래) |
-| `colors` | 글자색 팔레트의 미리 정한 색 `{ label, value }[]`. 없으면 기본 9색. 「기본」·「직접 고르기」 는 항상 있음 |
+| `colors` | 글자색 팔레트의 미리 정한 색 `{ label, value }[]`. 없으면 기본 9색. 「기본」 은 항상 있음. 라이트·다크에서 색이 바뀌게 하려면 `THEME_TEXT_COLORS`(아래 「색 바꾸기」) |
+| `paletteOnly` | `true` 면 「직접 고르기」 를 숨기고, 불러오거나 붙여넣거나 HTML 모드로 넣은 글에서 `colors` 에 없는 글자색을 지운다. 「직접 고르기」 는 이 값이 없을 때만 있음. 처음 그릴 때의 `colors` 로 판단 |
 | `toolbar` | `'fixed'`(기본) 또는 `'bubble'`(글자를 고르면 뜸). 터치 기기는 항상 고정 툴바(밀어서 넘김). 칸이 좁으면 툴바는 한 줄을 유지하고 들어가지 않는 항목을 오른쪽 끝부터 「⋯」(더 보기)로 옮긴다 |
 | `htmlClassNames` | `{ youtube }` — 저장 HTML 의 유튜브 iframe 에 붙일 class |
 | `embedHosts` | 붙여넣은 영상 주소를 영상 블록으로 넣을 수 있는 호스트(아래 「영상 주소 붙여넣기」). 처음 그릴 때의 값만 씀. 비우면 영상 블록을 쓰지 않음. 목록에 없는 호스트의 영상 블록은 열 때 빠지므로, 기존 글을 고쳐 저장하면 사라짐 |
@@ -149,6 +150,24 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `--aikive-toolbar-border` | `#525259` |
 | `--aikive-toolbar-hover` | `#3b3b40` |
 | `--aikive-toolbar-active` | `#46add4` |
+| `--aikive-text-border` | `#e5e7eb` — 구분선·표 칸·할 일 체크박스 테두리 |
+
+### 라이트·다크 글자색
+
+`THEME_TEXT_COLORS`(`@studio-freewillusion/aikive-text-editor/editor`)는 8색 팔레트로, 값이 `var(--aikive-color-<이름>, 다크 값)` 이라 저장한 글의 색이 페이지의 변수를 따라 바뀝니다. 라이트 모드에서는 아래 변수를 덮어씁니다. `colors={THEME_TEXT_COLORS}` 와 `paletteOnly` 를 함께 쓰면 글에 이 8색만 남습니다.
+
+| 변수 | 기본값(다크) |
+| --- | --- |
+| `--aikive-color-strong` | `#ffffff` |
+| `--aikive-color-gray` | `#a6a6a6` |
+| `--aikive-color-red` | `#f96960` |
+| `--aikive-color-orange` | `#ff6820` |
+| `--aikive-color-yellow` | `#ffd43b` |
+| `--aikive-color-green` | `#51cf66` |
+| `--aikive-color-blue` | `#46add4` |
+| `--aikive-color-purple` | `#b197fc` |
+
+형광펜(`mark`) 글자는 바탕이 밝은 노랑이라 모드와 상관없이 `#18181b` 입니다.
 
 ## 개발
 

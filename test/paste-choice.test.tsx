@@ -3,7 +3,7 @@ import type { Editor } from '@tiptap/react';
 import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { AikiveTextEditor, type AikiveTextEditorHandle, type AikiveTextEditorProps } from '../src/editor';
-import { pastePlainText } from './paste';
+import { pastePlainText, pasteWithHtml } from './paste';
 
 const HOSTS = ['video.example.com'];
 const AIKIVE = 'https://video.example.com/watch?v=abc123';
@@ -182,5 +182,20 @@ describe('붙여넣기 선택 창', () => {
     const { ed } = await setup({ initialContent: '<pre><code>x</code></pre>' });
     await paste(ed, AIKIVE);
     expect(menu()).toBeNull();
+  });
+
+  it('paletteOnly 면 붙여넣은 글자·링크의 팔레트 밖 글자색을 버린다', async () => {
+    const red = 'var(--aikive-color-red, #f96960)';
+    const { ref, ed } = await setup({ paletteOnly: true, colors: [{ label: '빨강', value: red }] });
+    await act(async () => {
+      pasteWithHtml(
+        ed,
+        'abc',
+        `<p><span style="color: #ff00ff">a</span><span style="color: ${red}">b</span><a href="https://example.com" style="color: rgb(1, 2, 3)">c</a></p>`,
+      );
+    });
+    const html = ref.current!.getHTML();
+    expect(html).toContain(red);
+    expect(html).not.toMatch(/#ff00ff|rgb\(255, 0, 255\)|rgb\(1, 2, 3\)|#010203/);
   });
 });
