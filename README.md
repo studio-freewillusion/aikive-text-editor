@@ -150,7 +150,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `--aikive-toolbar-border` | `#525259` |
 | `--aikive-toolbar-hover` | `#3b3b40` |
 | `--aikive-toolbar-active` | `#46add4` |
-| `--aikive-text-border` | `#e5e7eb` — 구분선·표 칸·할 일 체크박스 테두리 |
+| `--aikive-text-border` | `#525259` — 구분선·표 칸·할 일 체크박스 테두리 |
 
 ### 라이트·다크 글자색
 
