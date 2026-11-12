@@ -57,6 +57,15 @@ describe('AikiveTextEditor', () => {
     expect(ref.current!.getHTML()).toMatch(/color: (#123456|rgb\(18, 52, 86\))/);
   });
 
+  it('paletteOnly 여도 resetContent 로 넣은 옛 JSON 문서는 글자 안에 style 마크업이 있어도 글자가 그대로다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    const text = "<span style='color: #ff00ff'>&quot;</span>";
+    const { container } = render(<AikiveTextEditor ref={ref} initialContent="<p>x</p>" colors={PALETTE} paletteOnly />);
+    const ed = await editorOf(container);
+    act(() => ref.current!.resetContent(JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] })));
+    expect(ed.getText()).toBe(text);
+  });
+
   it('paletteOnly 여도 옛 JSON 문서는 글자 안에 style 마크업이 있어도 글자가 그대로다', async () => {
     const text = "<span style='color: #ff00ff'>&quot;</span>";
     const json = JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] });
