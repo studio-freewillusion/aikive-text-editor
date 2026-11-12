@@ -133,7 +133,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 
 ## 색 바꾸기
 
-`styles.css` 의 CSS 변수를 덮어씁니다.
+`styles.css` 의 CSS 변수를 덮어씁니다. 기본값은 어두운 바탕용이라, 밝은 바탕에서는 아래 표의 변수도 함께 덮어씁니다.
 
 | 변수 | 기본값 |
 | --- | --- |
