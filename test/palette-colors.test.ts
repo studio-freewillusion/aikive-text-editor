@@ -15,6 +15,11 @@ describe('stripOffPaletteColors', () => {
     expect(stripOffPaletteColors(html, PALETTE)).toBe(html);
   });
 
+  it('ASCII 밖 글자가 든 변수 이름도 대소문자를 가린다', () => {
+    const out = parse(stripOffPaletteColors('<p><span style="color: var(--é-RED, #f96960)">a</span></p>', ['var(--é-red, #f96960)']));
+    expect(out.querySelector('span')?.hasAttribute('style')).toBe(false);
+  });
+
   it('변수 이름 밖(대체 hex)의 대소문자는 가리지 않는다', () => {
     const html = '<p><span style="color: var(--aikive-color-red, #F96960)">빨강</span></p>';
     expect(stripOffPaletteColors(html, PALETTE)).toBe(html);
