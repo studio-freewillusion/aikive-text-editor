@@ -57,6 +57,30 @@ describe('AikiveTextEditor', () => {
     expect(ref.current!.getHTML()).toMatch(/color: (#123456|rgb\(18, 52, 86\))/);
   });
 
+  it('paletteOnly 여도 옛 JSON 문서는 글자 안에 style 마크업이 있어도 글자가 그대로다', async () => {
+    const text = "<span style='color: #ff00ff'>&quot;</span>";
+    const json = JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] });
+    const { container } = render(<AikiveTextEditor initialContent={json} colors={PALETTE} paletteOnly />);
+    expect((await editorOf(container)).getText()).toBe(text);
+  });
+
+  it('paletteOnly 면 HTML 모드에 JSON 모양 글을 넣어도 팔레트 밖 색을 지운다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    const { container } = render(<AikiveTextEditor ref={ref} initialContent="<p>x</p>" colors={PALETTE} paletteOnly />);
+    await editorOf(container);
+    act(() => ref.current!.setSourceMode(true));
+    fireEvent.change(container.querySelector('textarea')!, { target: { value: `["<span style='color: #ff00ff'>a</span>"]` } });
+    act(() => ref.current!.setSourceMode(false));
+    expect(ref.current!.getHTML()).not.toMatch(/ff00ff|255, 0, 255/);
+  });
+
+  it('paletteOnly 면 JSON 문자열로 감싼 HTML(처음 내용)도 팔레트 밖 색을 지운다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    render(<AikiveTextEditor ref={ref} initialContent={JSON.stringify(`<p><span style='color: #ff00ff'>a</span></p>`)} colors={PALETTE} paletteOnly />);
+    await waitFor(() => expect(ref.current?.getHTML()).toContain('a'));
+    expect(ref.current!.getHTML()).not.toMatch(/ff00ff|255, 0, 255/);
+  });
+
   it('paletteOnly 면 HTML 모드 입력을 팔레트 밖 색을 지운 HTML 로 onChange 하고, 글 모드로 돌아와도 그 색이 없다', async () => {
     const ref = createRef<AikiveTextEditorHandle>();
     const onChange = vi.fn();

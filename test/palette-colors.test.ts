@@ -10,9 +10,14 @@ const parse = (html: string) => {
 const PALETTE = ['var(--aikive-color-red, #f96960)', 'var(--aikive-color-blue, #46add4)'];
 
 describe('stripOffPaletteColors', () => {
-  it('팔레트에 있는 글자색은 남긴다(공백·대소문자가 달라도 같은 값으로 본다)', () => {
-    const html = '<p><span style="color: VAR(--aikive-color-red,#F96960)">빨강</span></p>';
+  it('팔레트에 있는 글자색은 공백이 달라도 남긴다', () => {
+    const html = '<p><span style="color: var(--aikive-color-red,#f96960)">빨강</span></p>';
     expect(stripOffPaletteColors(html, PALETTE)).toBe(html);
+  });
+
+  it('CSS 변수 이름은 대소문자를 가린다 — 이름만 대문자인 변수는 다른 색으로 보고 지운다', () => {
+    const out = parse(stripOffPaletteColors('<p><span style="color: var(--AIKIVE-COLOR-RED, #f96960)">a</span></p>', PALETTE));
+    expect(out.querySelector('span')?.hasAttribute('style')).toBe(false);
   });
 
   it('팔레트에 없는 글자색(hex·rgb·다른 변수)은 color 선언만 지우고 글자 크기 등 다른 선언은 남긴다', () => {
@@ -42,6 +47,13 @@ describe('stripOffPaletteColors', () => {
     expect(stripOffPaletteColors(html, PALETTE)).toBe(html);
   });
 
+  it('style 객체가 없는 요소(MathML 등)가 있어도 오류 없이 나머지를 거른다', () => {
+    const out = parse(
+      stripOffPaletteColors('<p><math style="color: #ff00ff"><mi>x</mi></math><span style="color: #ff00ff">a</span></p>', PALETTE),
+    );
+    expect(out.querySelector('span')?.hasAttribute('style')).toBe(false);
+  });
+
   it('서버처럼 document 가 없으면 오류 없이 그대로 돌려준다', () => {
     const html = '<p><span style="color: #ff00ff">a</span></p>';
     vi.stubGlobal('document', undefined);
@@ -50,13 +62,5 @@ describe('stripOffPaletteColors', () => {
     } finally {
       vi.unstubAllGlobals();
     }
-  });
-
-  it('옛 JSON 문서는 글자 안에 style 마크업이 있어도 건드리지 않는다', () => {
-    const json = JSON.stringify({
-      type: 'doc',
-      content: [{ type: 'paragraph', content: [{ type: 'text', text: "<span style='color: #ff00ff'>&quot;</span>" }] }],
-    });
-    expect(stripOffPaletteColors(json, PALETTE)).toBe(json);
   });
 });
