@@ -45,10 +45,11 @@ describe('styles.css', () => {
     const css = readFileSync('dist/styles.css', 'utf8');
     expect(css).toContain('--aikive-color-strong: #ffffff;');
     expect(css).toContain('--aikive-color-purple: #b197fc;');
-    expect(css).toContain('--aikive-text-border: #e5e7eb;');
+    // 기본 테마는 다크라 표·구분선도 인용·툴바 테두리와 같은 어두운 선 색을 쓴다
+    expect(css).toContain('--aikive-text-border: #525259;');
     // 노란 바탕은 어느 모드든 진한 글자여야 읽힌다
     expect(css).toMatch(/\.tiptap mark\s*\{[^}]*color: #18181b/);
-    expect(css.match(/#e5e7eb/g)).toHaveLength(1);
+    expect(css).not.toContain('#e5e7eb');
     expect(css).toMatch(/\.tiptap hr\s*\{[^}]*border-top: 1px solid var\(--aikive-text-border\)/);
   }, 180_000);
 });

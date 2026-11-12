@@ -133,7 +133,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 
 ## 색 바꾸기
 
-`styles.css` 의 CSS 변수를 덮어씁니다.
+`styles.css` 의 CSS 변수를 덮어씁니다. 기본값은 어두운 바탕용이라, 밝은 바탕에서는 아래 표의 변수도 함께 덮어씁니다.
 
 | 변수 | 기본값 |
 | --- | --- |
@@ -150,7 +150,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `--aikive-toolbar-border` | `#525259` |
 | `--aikive-toolbar-hover` | `#3b3b40` |
 | `--aikive-toolbar-active` | `#46add4` |
-| `--aikive-text-border` | `#e5e7eb` — 구분선·표 칸·할 일 체크박스 테두리 |
+| `--aikive-text-border` | `#525259` — 구분선·표 칸·할 일 체크박스 테두리 |
 
 ### 라이트·다크 글자색
 
