@@ -1,12 +1,12 @@
 import { EditorState, NodeSelection, PluginKey } from '@tiptap/pm/state';
 import { CellSelection } from '@tiptap/pm/tables';
 import DragHandle from '@tiptap/extension-drag-handle-react';
-import { EditorContent, posToDOMRect, useEditor, type Editor } from '@tiptap/react';
+import { EditorContent, posToDOMRect, useEditor, type Editor, type JSONContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { GripVertical } from '../ui/icons';
 import { shouldShowBubbleMenu } from '../ui/should-show-bubble-menu';
-import { Toolbar } from '../ui/toolbar';
+import { COLOR_OPTIONS, Toolbar } from '../ui/toolbar';
 import { InputPopover, type PopoverAnchor } from '../ui/input-popover';
 import { PasteChoice } from '../ui/paste-choice';
 import {
@@ -21,6 +21,7 @@ import {
   type UploadPlaceholderStorage,
 } from '../extensions';
 import { parseContent } from './parse-content';
+import { stripOffPaletteColors } from './palette-colors';
 import { attachFiles, IMAGE_MIME_TYPES, type FileDeps } from './attach-files';
 import { applySourceContent, SOURCE_HTML_ERROR_MESSAGE } from './source-mode';
 import { embedTargetOf, insertPastedEmbed, type EmbedTarget } from './paste-embed';
@@ -35,6 +36,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     editable = true,
     features: featuresProp,
     colors,
+    paletteOnly,
     placeholder,
     toolbar = 'fixed',
     htmlClassNames,
@@ -77,6 +79,10 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
   const [coarsePointer, setCoarsePointer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [initialEmbedHosts] = useState(() => embedHosts ?? []);
+  const [initialPalette] = useState(() => (paletteOnly ? (colors ?? COLOR_OPTIONS).map((c) => c.value) : null));
+  // JSON 문서는 parseContent 가 고른 결과로 판단한다 — 문자열이면 tiptap 이 HTML 로 읽는다
+  const keepPalette = <T extends string | JSONContent>(content: T): T =>
+    (initialPalette && typeof content === 'string' && content ? stripOffPaletteColors(content, initialPalette) : content) as T;
   const features = { ...DEFAULT_FEATURES, ...featuresProp };
   const [popover, setPopover] = useState<PopoverKind | null>(null);
   const [pasteChoice, setPasteChoice] = useState<{ range: PastedUrlRange; target: EmbedTarget } | null>(null);
@@ -102,11 +108,12 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
     immediatelyRender: false,
     editable,
     extensions: buildExtensions(editable, htmlClassNames, fileDeps, placeholder, initialEmbedHosts),
-    content: parseContent(initialContent, initialEmbedHosts),
+    content: keepPalette(parseContent(initialContent, initialEmbedHosts)),
     editorProps: {
       attributes: { class: 'tiptap' },
       // 바깥에서 붙여넣은 영상은 새 첨부로 막는다 — 같은 에디터 안 복사·이동은 이 경로를 안 탄다
-      transformPastedHTML: (html) => html.replace(/<video[\s\S]*?<\/video>/gi, '').replace(/<video[^>]*\/?>/gi, ''),
+      transformPastedHTML: (html) =>
+        keepPalette(html.replace(/<video[\s\S]*?<\/video>/gi, '').replace(/<video[^>]*\/?>/gi, '')),
     },
     onUpdate: ({ editor: ed }) => onChangeRef.current?.(htmlOf(ed)),
   });
@@ -247,7 +254,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       return;
     }
     try {
-      applySourceContent(editor, sourceTextRef.current);
+      applySourceContent(editor, keepPalette(sourceTextRef.current));
     } catch {
       notice(SOURCE_HTML_ERROR_MESSAGE, 'error');
       return;
@@ -267,7 +274,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
         setPopover(null);
         setPasteChoice(null);
         applySourceMode(false);
-        editor.commands.setContent(parseContent(value, initialEmbedHosts), { emitUpdate: false });
+        editor.commands.setContent(keepPalette(parseContent(value, initialEmbedHosts)), { emitUpdate: false });
         // 되돌리기 기록을 새로 시작한다 — 남기면 되돌리기가 이전 내용을 끌어온다
         editor.view.updateState(EditorState.create({ doc: editor.state.doc, plugins: editor.state.plugins }));
         editor.view.dispatch(editor.state.tr);
@@ -309,6 +316,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
       onPickImage={onUploadImage ? () => fileInputRef.current?.click() : undefined}
       onOpenPopover={(kind) => openInputPopover(editor, kind)}
       colors={colors}
+      paletteOnly={paletteOnly}
       uploading={uploading}
       scrollable={coarsePointer}
       boundary={useBubble ? rootEl : null}
@@ -364,7 +372,7 @@ export const AikiveTextEditor = forwardRef<AikiveTextEditorHandle, AikiveTextEdi
           value={sourceText}
           onChange={(e) => {
             updateSourceText(e.target.value);
-            onChangeRef.current?.(e.target.value);
+            onChangeRef.current?.(keepPalette(e.target.value));
           }}
         />
       )}

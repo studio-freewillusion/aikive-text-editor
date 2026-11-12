@@ -64,6 +64,13 @@ describe('AikiveTextViewer', () => {
     expect(container.firstChild).toHaveClass('tiptap', 'detail');
   });
 
+  it('뷰어는 색 변수 글자색(var(--aikive-color-red, #f96960))을 정화 뒤에도 남긴다', () => {
+    const { container } = render(
+      <AikiveTextViewer content={'<p><span style="color: var(--aikive-color-red, #f96960)">빨강</span></p>'} />,
+    );
+    expect(container.querySelector('span')?.getAttribute('style')).toContain('var(--aikive-color-red, #f96960)');
+  });
+
   it('p 안 블록 요소가 있는 옛 HTML 도 div 를 p 안에 두지 않는다', () => {
     const { container } = render(<AikiveTextViewer content="<p>앞<div>블록</div>뒤</p>" />);
     expect(container.querySelector('p div')).toBeNull();

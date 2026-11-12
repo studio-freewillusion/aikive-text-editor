@@ -39,4 +39,16 @@ describe('styles.css', () => {
     expect(css).not.toMatch(/--aikive-text-font:/);
     expect(css).not.toMatch(/pretendard/i);
   }, 180_000);
+
+  it('styles.css 는 --aikive-color-* 다크 기본값과 하이라이트(mark)의 진한 글자색을 담고, 구분선·표·체크박스 테두리는 --aikive-text-border 를 쓴다', () => {
+    execSync('npm run build', { stdio: 'ignore' });
+    const css = readFileSync('dist/styles.css', 'utf8');
+    expect(css).toContain('--aikive-color-strong: #ffffff;');
+    expect(css).toContain('--aikive-color-purple: #b197fc;');
+    expect(css).toContain('--aikive-text-border: #e5e7eb;');
+    // 노란 바탕은 어느 모드든 진한 글자여야 읽힌다
+    expect(css).toMatch(/\.tiptap mark\s*\{[^}]*color: #18181b/);
+    expect(css.match(/#e5e7eb/g)).toHaveLength(1);
+    expect(css).toMatch(/\.tiptap hr\s*\{[^}]*border-top: 1px solid var\(--aikive-text-border\)/);
+  }, 180_000);
 });

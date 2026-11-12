@@ -50,6 +50,8 @@ export interface AikiveTextEditorProps {
   editable?: boolean;
   features?: Features;
   colors?: ColorOption[];
+  // 붙여넣기 변환이 에디터를 만들 때 정해져 colors 와 함께 처음 값만 쓴다 — 옛 JSON 문서의 색은 거르지 않는다
+  paletteOnly?: boolean;
   placeholder?: string;
   toolbar?: 'fixed' | 'bubble';
   htmlClassNames?: HtmlClassNames;

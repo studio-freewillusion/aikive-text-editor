@@ -7,10 +7,19 @@
   --aikive-text-error: #f96960;
   --aikive-quote-bg: #28282b;
   --aikive-quote-border: #525259;
+  --aikive-text-border: #e5e7eb;
   --aikive-toolbar-bg: #28282b;
   --aikive-toolbar-fg: #ebebeb;
   --aikive-toolbar-border: #525259;
   --aikive-toolbar-hover: #3b3b40;
   --aikive-toolbar-active: #46add4;
   --aikive-toolbar-tooltip: #46464d;
+  --aikive-color-strong: #ffffff;
+  --aikive-color-gray: #a6a6a6;
+  --aikive-color-red: #f96960;
+  --aikive-color-orange: #ff6820;
+  --aikive-color-yellow: #ffd43b;
+  --aikive-color-green: #51cf66;
+  --aikive-color-blue: #46add4;
+  --aikive-color-purple: #b197fc;
 }

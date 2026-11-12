@@ -17,7 +17,7 @@ function createEditor(content: string) {
 }
 
 function renderToolbar(
-  opts: { features?: Required<Features>; onPickImage?: () => void; onOpenPopover?: (kind: string) => void; colors?: ColorOption[] } = {},
+  opts: { features?: Required<Features>; onPickImage?: () => void; onOpenPopover?: (kind: string) => void; colors?: ColorOption[]; paletteOnly?: boolean } = {},
 ) {
   return render(
     <Toolbar
@@ -28,6 +28,7 @@ function renderToolbar(
       onPickImage={opts.onPickImage}
       onOpenPopover={opts.onOpenPopover ?? (() => {})}
       colors={opts.colors}
+      paletteOnly={opts.paletteOnly}
     />,
   );
 }
@@ -152,6 +153,14 @@ describe('Toolbar', () => {
     expect(editor.getHTML()).toMatch(/color: (#ffffff|rgb\(255, 255, 255\))/);
     expect(screen.getByRole('button', { name: '글자색 기본' })).toBeInTheDocument();
     expect(screen.getByLabelText('글자색 직접 고르기')).toBeInTheDocument();
+  });
+
+  it('paletteOnly 면 글자색 직접 고르기 입력이 없다', async () => {
+    createEditor('<p>안녕</p>');
+    renderToolbar({ colors: [{ label: '하양', value: '#ffffff' }], paletteOnly: true });
+    await userEvent.setup().click(screen.getByRole('button', { name: '글자색' }));
+    expect(screen.getByRole('button', { name: '글자색 하양' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('글자색 직접 고르기')).toBeNull();
   });
 
   const optionValues = (label: string) =>

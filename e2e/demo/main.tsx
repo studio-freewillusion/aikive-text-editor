@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AikiveTextEditor, type AikiveTextEditorHandle } from '../../src/editor';
+import { AikiveTextEditor, THEME_TEXT_COLORS, type AikiveTextEditorHandle } from '../../src/editor';
 import { AikiveTextViewer } from '../../src/viewer';
 import '../../src/styles/index.css';
 
 const params = new URLSearchParams(location.search);
 const EMBED_HOSTS = ['video.example.com'];
+const PALETTE_ONLY = params.get('paletteOnly') === 'true';
 
 function Demo() {
   const ref = useRef<AikiveTextEditorHandle>(null);
@@ -26,6 +27,8 @@ function Demo() {
         onUploadImage={async (f) => URL.createObjectURL(f)}
         onNotice={(m) => setNotices((n) => [...n, m])}
         embedHosts={EMBED_HOSTS}
+        colors={PALETTE_ONLY ? THEME_TEXT_COLORS : undefined}
+        paletteOnly={PALETTE_ONLY}
       />
       <output data-testid="html">{html}</output>
       <ul data-testid="notices">
