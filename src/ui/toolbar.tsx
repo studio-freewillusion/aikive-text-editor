@@ -15,7 +15,6 @@ export interface ToolbarProps {
   onOpenPopover: (kind: PopoverKind) => void;
   scrollable?: boolean;
   colors?: ColorOption[];
-  /** 미리 정한 색만 쓰게 한다 — 글자색 직접 고르기를 숨긴다 */
   paletteOnly?: boolean;
   uploading?: boolean;
   /** 말풍선 툴바처럼 툴바 상자 폭이 내용에 맞춰질 때, 들어갈 수 있는 폭의 기준 요소 */

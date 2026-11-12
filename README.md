@@ -82,7 +82,7 @@ const ref = useRef<AikiveTextEditorHandle>(null);
 | `editable` | 기본 `true` |
 | `features` | 툴바 기능 켜기/끄기(아래) |
 | `colors` | 글자색 팔레트의 미리 정한 색 `{ label, value }[]`. 없으면 기본 9색. 「기본」 은 항상 있음. 라이트·다크에서 색이 바뀌게 하려면 `THEME_TEXT_COLORS`(아래 「색 바꾸기」) |
-| `paletteOnly` | `true` 면 「직접 고르기」 를 숨기고, 불러오거나 붙여넣거나 HTML 모드로 넣은 글에서 `colors` 에 없는 글자색을 지운다. 「직접 고르기」 는 이 값이 없을 때만 있음. 처음 그릴 때의 `colors` 로 판단 |
+| `paletteOnly` | `true` 면 「직접 고르기」 를 숨기고, 불러오거나 붙여넣거나 HTML 모드로 넣은 HTML 글에서 `colors` 에 없는 글자색을 지운다(옛 JSON 문서는 거르지 않음). 「직접 고르기」 는 이 값이 없을 때만 있음. 처음 그릴 때의 `colors` 로 판단 |
 | `toolbar` | `'fixed'`(기본) 또는 `'bubble'`(글자를 고르면 뜸). 터치 기기는 항상 고정 툴바(밀어서 넘김). 칸이 좁으면 툴바는 한 줄을 유지하고 들어가지 않는 항목을 오른쪽 끝부터 「⋯」(더 보기)로 옮긴다 |
 | `htmlClassNames` | `{ youtube }` — 저장 HTML 의 유튜브 iframe 에 붙일 class |
 | `embedHosts` | 붙여넣은 영상 주소를 영상 블록으로 넣을 수 있는 호스트(아래 「영상 주소 붙여넣기」). 처음 그릴 때의 값만 씀. 비우면 영상 블록을 쓰지 않음. 목록에 없는 호스트의 영상 블록은 열 때 빠지므로, 기존 글을 고쳐 저장하면 사라짐 |

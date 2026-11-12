@@ -22,6 +22,13 @@ describe('AikiveTextEditor', () => {
     '<p><span style="color: var(--aikive-color-red, #f96960)">a</span><span style="color: #ff00ff">b</span>' +
     '<a href="https://example.com" style="color: #123456">c</a></p>';
 
+  it('paletteOnly 에 colors 가 없으면 기본 팔레트 색을 저장된 rgb 표기로 불러와도 남긴다', async () => {
+    const ref = createRef<AikiveTextEditorHandle>();
+    render(<AikiveTextEditor ref={ref} initialContent={'<p><span style="color: rgb(220, 38, 38)">a</span></p>'} paletteOnly />);
+    await waitFor(() => expect(ref.current?.getHTML()).toContain('<span'));
+    expect(ref.current!.getHTML()).toMatch(/color: (rgb\(220, 38, 38\)|#dc2626)/);
+  });
+
   it('paletteOnly 면 에디터 툴바에 글자색 직접 고르기가 없다', async () => {
     const { container } = render(<AikiveTextEditor initialContent="<p>x</p>" colors={PALETTE} paletteOnly />);
     await editorOf(container);

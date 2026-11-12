@@ -50,7 +50,7 @@ export interface AikiveTextEditorProps {
   editable?: boolean;
   features?: Features;
   colors?: ColorOption[];
-  // 켜면 colors(없으면 기본 팔레트) 밖 글자색을 불러오기·붙여넣기·HTML 모드에서 지우고 직접 고르기를 숨긴다 — 처음 값만 쓴다
+  // 붙여넣기 변환이 에디터를 만들 때 정해져 colors 와 함께 처음 값만 쓴다 — 옛 JSON 문서의 색은 거르지 않는다
   paletteOnly?: boolean;
   placeholder?: string;
   toolbar?: 'fixed' | 'bubble';
